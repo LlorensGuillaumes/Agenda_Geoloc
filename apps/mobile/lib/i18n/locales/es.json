@@ -13,7 +13,9 @@
     "paused": "pausada",
     "errorLoading": "No se ha podido cargar.",
     "retry": "Reintentar",
-    "comingSoon": "Próximamente"
+    "comingSoon": "Próximamente",
+    "error": "Error",
+    "saving": "Guardando…"
   },
   "tabs": {
     "agenda": "Agenda",
@@ -74,7 +76,15 @@
     "newTitle": "Nuevo lugar",
     "detailTitle": "Lugar",
     "newComingSoon": "El selector con mapa llega en el siguiente paso de Fase 3.",
-    "detailComingSoon": "El detalle y la edición de lugares llegan en la siguiente iteración."
+    "detailComingSoon": "El detalle y la edición de lugares llegan en la siguiente iteración.",
+    "name": "Nombre",
+    "namePlaceholder": "Casa, Oficina, Mercadona…",
+    "radius": "Radio",
+    "color": "Color",
+    "tapToMove": "Toca el mapa o arrastra el pin para ajustar la posición.",
+    "locating": "Localizándote…",
+    "nameRequired": "Pon un nombre al lugar.",
+    "createError": "No se ha podido guardar el lugar."
   },
   "settings": {
     "language": "Idioma"

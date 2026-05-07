@@ -38,6 +38,12 @@
             "backgroundColor": "#000000"
           }
         }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Permite a Agenda usar tu ubicación para guardar lugares en el mapa."
+        }
       ]
     ],
     "experiments": {

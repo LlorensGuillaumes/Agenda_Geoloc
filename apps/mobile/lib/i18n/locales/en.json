@@ -13,7 +13,9 @@
     "paused": "paused",
     "errorLoading": "Could not load.",
     "retry": "Retry",
-    "comingSoon": "Coming soon"
+    "comingSoon": "Coming soon",
+    "error": "Error",
+    "saving": "Saving…"
   },
   "tabs": {
     "agenda": "Agenda",
@@ -74,7 +76,15 @@
     "newTitle": "New place",
     "detailTitle": "Place",
     "newComingSoon": "The map picker ships in the next step of Phase 3.",
-    "detailComingSoon": "Detail and editing ship in the next iteration."
+    "detailComingSoon": "Detail and editing ship in the next iteration.",
+    "name": "Name",
+    "namePlaceholder": "Home, Office, Mercadona…",
+    "radius": "Radius",
+    "color": "Color",
+    "tapToMove": "Tap the map or drag the pin to adjust the position.",
+    "locating": "Locating you…",
+    "nameRequired": "Give the place a name.",
+    "createError": "Could not save the place."
   },
   "settings": {
     "language": "Language"
