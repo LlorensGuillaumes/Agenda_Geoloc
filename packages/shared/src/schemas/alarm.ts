@@ -29,11 +29,13 @@ export const locationConfigSchema = z.object({
   event: locationEventSchema,
 });
 
-export const alarmSchema = z
+// Input al crear una alarma. ownerId NO viene del cliente: por defecto es el
+// usuario autenticado. Para que un amigo cree alarma en agenda ajena (Fase 4)
+// se añadirá un campo opcional `ownerId` validado contra friendships.
+export const createAlarmSchema = z
   .object({
     title: z.string().min(1).max(200),
     notes: z.string().max(2000).optional(),
-    ownerId: z.string().uuid(),
     triggerType: triggerTypeSchema,
     timeConfig: timeConfigSchema.optional(),
     locationConfig: locationConfigSchema.optional(),
@@ -65,7 +67,7 @@ export const updateAlarmSchema = z.object({
   locationConfig: locationConfigSchema.optional(),
 });
 
-export type AlarmInput = z.infer<typeof alarmSchema>;
+export type CreateAlarmInput = z.infer<typeof createAlarmSchema>;
 export type UpdateAlarmInput = z.infer<typeof updateAlarmSchema>;
 export type TimeConfigInput = z.infer<typeof timeConfigSchema>;
 export type LocationConfigInput = z.infer<typeof locationConfigSchema>;

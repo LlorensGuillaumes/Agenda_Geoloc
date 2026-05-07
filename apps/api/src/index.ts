@@ -7,6 +7,8 @@ import { toNodeHandler } from 'better-auth/node';
 import { env } from './env.js';
 import { auth } from './auth.js';
 import { requireAuth } from './middleware/requireAuth.js';
+import placesRouter from './routes/places.js';
+import alarmsRouter from './routes/alarms.js';
 
 const app = express();
 
@@ -43,6 +45,9 @@ app.get('/health', (_req: Request, res: Response) => {
 app.get('/api/me', requireAuth, (req: Request, res: Response) => {
   res.json({ user: req.session!.user, session: req.session!.session });
 });
+
+app.use('/api/places', placesRouter);
+app.use('/api/alarms', alarmsRouter);
 
 app.use((_req: Request, res: Response) => {
   res.status(404).json({ error: 'Not Found' });
