@@ -62,13 +62,31 @@
     "emptyHint": "Tap + to create your first one",
     "newTitle": "New alarm",
     "detailTitle": "Alarm",
-    "newComingSoon": "The creation wizard ships in the next step of Phase 3.",
     "detailComingSoon": "Detail and editing ship in the next iteration.",
     "trigger": {
       "time": "By time",
       "location": "By place",
       "both": "Time and place"
-    }
+    },
+    "detailsSection": "Details",
+    "triggerSection": "When should it fire?",
+    "timeSection": "Date and time",
+    "locationSection": "Place",
+    "titlePlaceholder": "Run the laundry",
+    "notesPlaceholder": "Notes (optional)",
+    "savedPlace": "Saved place",
+    "customPoint": "Map point",
+    "noPlacesYet": "You don't have any saved places yet.",
+    "createFirstPlace": "Create the first one",
+    "eventLabel": "When you…",
+    "eventEnter": "Arrive",
+    "eventExit": "Leave",
+    "eventNearby": "Pass near",
+    "titleRequired": "Give the alarm a title.",
+    "triggerRequired": "Pick how to fire it (time, place or both).",
+    "dateInPast": "The date and time are already past.",
+    "placeRequired": "Pick a saved place or switch to map point.",
+    "createError": "Could not create the alarm."
   },
   "places": {
     "empty": "No saved places yet",

@@ -44,6 +44,12 @@
         {
           "locationWhenInUsePermission": "Permite a Agenda usar tu ubicación para guardar lugares en el mapa."
         }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#2563EB"
+        }
       ]
     ],
     "experiments": {

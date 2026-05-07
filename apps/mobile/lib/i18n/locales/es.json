@@ -62,13 +62,31 @@
     "emptyHint": "Toca el + para crear tu primera",
     "newTitle": "Nueva alarma",
     "detailTitle": "Alarma",
-    "newComingSoon": "El asistente de creación llega en el siguiente paso de Fase 3.",
     "detailComingSoon": "El detalle y la edición de alarmas llegan en la siguiente iteración.",
     "trigger": {
       "time": "Por hora",
       "location": "Por lugar",
       "both": "Hora y lugar"
-    }
+    },
+    "detailsSection": "Detalles",
+    "triggerSection": "¿Cuándo dispararla?",
+    "timeSection": "Fecha y hora",
+    "locationSection": "Lugar",
+    "titlePlaceholder": "Pon la lavadora",
+    "notesPlaceholder": "Notas (opcional)",
+    "savedPlace": "Lugar guardado",
+    "customPoint": "Punto en mapa",
+    "noPlacesYet": "Todavía no tienes lugares guardados.",
+    "createFirstPlace": "Crear el primero",
+    "eventLabel": "Cuando…",
+    "eventEnter": "Llegue",
+    "eventExit": "Salga",
+    "eventNearby": "Pase cerca",
+    "titleRequired": "Pon un título a la alarma.",
+    "triggerRequired": "Elige cómo dispararla (hora, lugar o ambos).",
+    "dateInPast": "La fecha y hora ya han pasado.",
+    "placeRequired": "Selecciona un lugar guardado o cambia a punto en mapa.",
+    "createError": "No se ha podido crear la alarma."
   },
   "places": {
     "empty": "Aún no tienes lugares guardados",

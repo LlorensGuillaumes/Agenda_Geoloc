@@ -8,6 +8,7 @@ import 'react-native-reanimated';
 
 import '@/global.css';
 import '@/lib/i18n';
+import '@/lib/notifications';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAuthStore } from '@/lib/auth/store';
 import { queryClient } from '@/lib/api/queryClient';

@@ -62,13 +62,31 @@
     "emptyHint": "Toca el + per crear la primera",
     "newTitle": "Nova alarma",
     "detailTitle": "Alarma",
-    "newComingSoon": "L'assistent de creació arriba en el següent pas de la Fase 3.",
     "detailComingSoon": "El detall i l'edició arriben en la propera iteració.",
     "trigger": {
       "time": "Per hora",
       "location": "Per lloc",
       "both": "Hora i lloc"
-    }
+    },
+    "detailsSection": "Detalls",
+    "triggerSection": "Quan disparar-la?",
+    "timeSection": "Data i hora",
+    "locationSection": "Lloc",
+    "titlePlaceholder": "Posa la rentadora",
+    "notesPlaceholder": "Notes (opcional)",
+    "savedPlace": "Lloc guardat",
+    "customPoint": "Punt al mapa",
+    "noPlacesYet": "Encara no tens llocs guardats.",
+    "createFirstPlace": "Crea el primer",
+    "eventLabel": "Quan…",
+    "eventEnter": "Arribi",
+    "eventExit": "Surti",
+    "eventNearby": "Passi a prop",
+    "titleRequired": "Posa un títol a l'alarma.",
+    "triggerRequired": "Tria com disparar-la (hora, lloc o ambdós).",
+    "dateInPast": "La data i hora ja han passat.",
+    "placeRequired": "Tria un lloc guardat o canvia a punt al mapa.",
+    "createError": "No s'ha pogut crear l'alarma."
   },
   "places": {
     "empty": "Encara no tens llocs guardats",
