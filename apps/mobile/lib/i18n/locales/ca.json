@@ -1,0 +1,13 @@
+{
+  "app": {
+    "name": "Agenda",
+    "tagline": "Alarmes amb temps i lloc"
+  },
+  "common": {
+    "save": "Desa",
+    "cancel": "Cancel·la",
+    "delete": "Elimina",
+    "edit": "Edita",
+    "loading": "Carregant…"
+  }
+}

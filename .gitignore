@@ -1,0 +1,83 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build outputs
+dist/
+build/
+*.tsbuildinfo
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# Expo
+.expo/
+.expo-shared/
+web-build/
+expo-env.d.ts
+
+# React Native
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+
+# Native
+android/
+ios/
+!apps/mobile/android/
+!apps/mobile/ios/
+
+# Drizzle
+drizzle/migrations/meta/_journal.json.bak
+
+# Local DB files (development)
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+
+# Turbo / cache
+.turbo/
+.cache/
+
+# Testing
+coverage/
+
+# Temporary
+tmp/
+temp/
+
+# Override global gitignore (user's D:\ProjectesGit\gitignore_global.txt
+# excludes **/packages/* which conflicts with our monorepo structure)
+!packages/
+!packages/**
+# Re-exclude node_modules and build artifacts inside packages
+packages/*/node_modules/
+packages/**/node_modules/
+packages/*/dist/
+packages/*/build/
+packages/*/*.tsbuildinfo
+packages/*/local.db
+packages/*/local.db-journal

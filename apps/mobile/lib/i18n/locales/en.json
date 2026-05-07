@@ -1,0 +1,13 @@
+{
+  "app": {
+    "name": "Agenda",
+    "tagline": "Time and location-based reminders"
+  },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "loading": "Loading…"
+  }
+}

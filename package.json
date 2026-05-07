@@ -1,0 +1,22 @@
+{
+  "name": "agenda",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Agenda con alarmas temporales y geofencing + amigos",
+  "packageManager": "pnpm@11.0.8",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "dev:api": "pnpm --filter @agenda/api dev",
+    "dev:mobile": "pnpm --filter mobile start",
+    "build:api": "pnpm --filter @agenda/api build",
+    "db:generate": "pnpm --filter @agenda/db db:generate",
+    "db:migrate": "pnpm --filter @agenda/db db:migrate",
+    "db:studio": "pnpm --filter @agenda/db db:studio",
+    "typecheck": "pnpm -r typecheck"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3"
+  }
+}

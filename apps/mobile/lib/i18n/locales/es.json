@@ -1,0 +1,13 @@
+{
+  "app": {
+    "name": "Agenda",
+    "tagline": "Alarmas con tiempo y lugar"
+  },
+  "common": {
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "delete": "Eliminar",
+    "edit": "Editar",
+    "loading": "Cargando…"
+  }
+}
