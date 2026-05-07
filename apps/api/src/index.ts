@@ -3,14 +3,33 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import { ZodError } from 'zod';
+import { toNodeHandler } from 'better-auth/node';
 import { env } from './env.js';
+import { auth } from './auth.js';
+import { requireAuth } from './middleware/requireAuth.js';
 
 const app = express();
 
-app.use(helmet());
-app.use(cors());
-app.use(express.json({ limit: '1mb' }));
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+  }),
+);
+
+app.use(
+  cors({
+    origin: env.NODE_ENV === 'production' ? false : true,
+    credentials: true,
+  }),
+);
+
 app.use(morgan(env.NODE_ENV === 'production' ? 'combined' : 'dev'));
+
+// Better-Auth expone su propio router en /api/auth/* y necesita ver el request
+// crudo (sin express.json), por eso se monta ANTES del body parser.
+app.all('/api/auth/*', toNodeHandler(auth));
+
+app.use(express.json({ limit: '1mb' }));
 
 app.get('/health', (_req: Request, res: Response) => {
   res.json({
@@ -19,6 +38,10 @@ app.get('/health', (_req: Request, res: Response) => {
     env: env.NODE_ENV,
     timestamp: new Date().toISOString(),
   });
+});
+
+app.get('/api/me', requireAuth, (req: Request, res: Response) => {
+  res.json({ user: req.session!.user, session: req.session!.session });
 });
 
 app.use((_req: Request, res: Response) => {
