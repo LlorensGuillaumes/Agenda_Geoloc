@@ -1,5 +1,10 @@
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:4000';
 
+// React Native fetch no envía Origin (los browsers sí). Better-Auth aplica un
+// check anti-CSRF que rechaza POST sin Origin. Mandamos uno que esté en la
+// lista de trustedOrigins del backend.
+const CLIENT_ORIGIN = 'http://localhost:8081';
+
 export class ApiError extends Error {
   constructor(
     public status: number,
@@ -19,6 +24,7 @@ type RequestOptions = Omit<RequestInit, 'body'> & {
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const { body, token, headers, ...rest } = options;
   const finalHeaders = new Headers(headers as HeadersInit | undefined);
+  finalHeaders.set('Origin', CLIENT_ORIGIN);
   if (body !== undefined) finalHeaders.set('Content-Type', 'application/json');
   if (token) finalHeaders.set('Authorization', `Bearer ${token}`);
 

@@ -1,3 +1,8 @@
+// Polyfill: Hermes en algunas versiones de RN no incluye Intl.PluralRules,
+// que i18next usa para resolver claves con plurales. Tiene que importarse
+// ANTES de i18next.
+import 'intl-pluralrules';
+
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import { getLocales } from 'expo-localization';
