@@ -73,7 +73,7 @@ temp/
 # excludes **/packages/* which conflicts with our monorepo structure)
 !packages/
 !packages/**
-# Re-exclude node_modules and build artifacts inside packages
+# Re-exclude node_modules, build artifacts, env files and DB inside packages
 packages/*/node_modules/
 packages/**/node_modules/
 packages/*/dist/
@@ -81,3 +81,6 @@ packages/*/build/
 packages/*/*.tsbuildinfo
 packages/*/local.db
 packages/*/local.db-journal
+packages/**/.env
+packages/**/.env.local
+packages/**/.env.*.local
