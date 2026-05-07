@@ -9,7 +9,16 @@
     "delete": "Delete",
     "edit": "Edit",
     "loading": "Loading…",
-    "back": "Back"
+    "back": "Back",
+    "paused": "paused",
+    "errorLoading": "Could not load.",
+    "retry": "Retry",
+    "comingSoon": "Coming soon"
+  },
+  "tabs": {
+    "agenda": "Agenda",
+    "places": "Places",
+    "settings": "Settings"
   },
   "auth": {
     "login": {
@@ -46,8 +55,28 @@
     },
     "logout": "Sign out"
   },
-  "home": {
-    "greeting": "Hello, {{name}}",
-    "placeholder": "Your reminders will show up here"
+  "alarms": {
+    "empty": "No alarms yet",
+    "emptyHint": "Tap + to create your first one",
+    "newTitle": "New alarm",
+    "detailTitle": "Alarm",
+    "newComingSoon": "The creation wizard ships in the next step of Phase 3.",
+    "detailComingSoon": "Detail and editing ship in the next iteration.",
+    "trigger": {
+      "time": "By time",
+      "location": "By place",
+      "both": "Time and place"
+    }
+  },
+  "places": {
+    "empty": "No saved places yet",
+    "emptyHint": "Tap + to add your first place",
+    "newTitle": "New place",
+    "detailTitle": "Place",
+    "newComingSoon": "The map picker ships in the next step of Phase 3.",
+    "detailComingSoon": "Detail and editing ship in the next iteration."
+  },
+  "settings": {
+    "language": "Language"
   }
 }

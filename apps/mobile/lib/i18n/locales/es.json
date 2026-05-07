@@ -9,7 +9,16 @@
     "delete": "Eliminar",
     "edit": "Editar",
     "loading": "Cargando…",
-    "back": "Volver"
+    "back": "Volver",
+    "paused": "pausada",
+    "errorLoading": "No se ha podido cargar.",
+    "retry": "Reintentar",
+    "comingSoon": "Próximamente"
+  },
+  "tabs": {
+    "agenda": "Agenda",
+    "places": "Lugares",
+    "settings": "Ajustes"
   },
   "auth": {
     "login": {
@@ -46,8 +55,28 @@
     },
     "logout": "Cerrar sesión"
   },
-  "home": {
-    "greeting": "Hola, {{name}}",
-    "placeholder": "Aquí aparecerán tus alarmas"
+  "alarms": {
+    "empty": "Aún no tienes alarmas",
+    "emptyHint": "Toca el + para crear tu primera",
+    "newTitle": "Nueva alarma",
+    "detailTitle": "Alarma",
+    "newComingSoon": "El asistente de creación llega en el siguiente paso de Fase 3.",
+    "detailComingSoon": "El detalle y la edición de alarmas llegan en la siguiente iteración.",
+    "trigger": {
+      "time": "Por hora",
+      "location": "Por lugar",
+      "both": "Hora y lugar"
+    }
+  },
+  "places": {
+    "empty": "Aún no tienes lugares guardados",
+    "emptyHint": "Toca el + para añadir tu primer lugar",
+    "newTitle": "Nuevo lugar",
+    "detailTitle": "Lugar",
+    "newComingSoon": "El selector con mapa llega en el siguiente paso de Fase 3.",
+    "detailComingSoon": "El detalle y la edición de lugares llegan en la siguiente iteración."
+  },
+  "settings": {
+    "language": "Idioma"
   }
 }

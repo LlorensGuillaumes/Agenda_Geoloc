@@ -82,6 +82,68 @@ type SignUpResponse = { token: string; user: AuthUser };
 type SignInResponse = { token: string; user: AuthUser; redirect: boolean };
 type MeResponse = { user: AuthUser; session: AuthSession };
 
+export type Place = {
+  id: string;
+  ownerId: string;
+  name: string;
+  latitude: number;
+  longitude: number;
+  radiusMeters: number;
+  icon: string | null;
+  color: string | null;
+  address: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type TimeConfig = {
+  datetime?: string;
+  repeat: 'once' | 'daily' | 'weekly';
+  weekdays?: number[];
+  timeWindow?: { start: string; end: string };
+};
+
+export type LocationConfig = {
+  mode: 'saved_place' | 'custom_point';
+  placeId?: string;
+  customPoint?: { latitude: number; longitude: number; radiusMeters: number };
+  event: 'enter' | 'exit' | 'nearby';
+};
+
+export type Alarm = {
+  id: string;
+  ownerId: string;
+  creatorId: string;
+  title: string;
+  notes: string | null;
+  isActive: boolean;
+  triggerType: 'time' | 'location' | 'time_and_location';
+  timeConfig: TimeConfig | null;
+  locationConfig: LocationConfig | null;
+  status: 'pending_acceptance' | 'active' | 'paused' | 'completed';
+  createdAt: string;
+  updatedAt: string;
+  lastFiredAt: string | null;
+};
+
+export type CreatePlaceInput = {
+  name: string;
+  latitude: number;
+  longitude: number;
+  radiusMeters?: number;
+  icon?: string;
+  color?: string;
+  address?: string;
+};
+
+export type CreateAlarmInput = {
+  title: string;
+  notes?: string;
+  triggerType: Alarm['triggerType'];
+  timeConfig?: TimeConfig;
+  locationConfig?: LocationConfig;
+};
+
 export const api = {
   baseUrl: API_URL,
 
@@ -105,4 +167,33 @@ export const api = {
     }),
 
   me: (token: string) => request<MeResponse>('/api/me', { token }),
+
+  places: {
+    list: (token: string) => request<Place[]>('/api/places', { token }),
+    create: (token: string, data: CreatePlaceInput) =>
+      request<Place>('/api/places', { method: 'POST', token, body: data }),
+    update: (token: string, id: string, data: Partial<CreatePlaceInput>) =>
+      request<Place>(`/api/places/${id}`, { method: 'PATCH', token, body: data }),
+    remove: (token: string, id: string) =>
+      request<null>(`/api/places/${id}`, { method: 'DELETE', token }),
+  },
+
+  alarms: {
+    list: (token: string) => request<Alarm[]>('/api/alarms', { token }),
+    create: (token: string, data: CreateAlarmInput) =>
+      request<Alarm>('/api/alarms', { method: 'POST', token, body: data }),
+    update: (
+      token: string,
+      id: string,
+      data: Partial<{
+        title: string;
+        notes: string;
+        isActive: boolean;
+        timeConfig: TimeConfig;
+        locationConfig: LocationConfig;
+      }>,
+    ) => request<Alarm>(`/api/alarms/${id}`, { method: 'PATCH', token, body: data }),
+    remove: (token: string, id: string) =>
+      request<null>(`/api/alarms/${id}`, { method: 'DELETE', token }),
+  },
 };

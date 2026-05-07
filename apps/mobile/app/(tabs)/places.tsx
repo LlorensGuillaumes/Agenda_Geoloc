@@ -3,55 +3,42 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Link } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { useAlarms } from '@/lib/alarms/hooks';
-import type { Alarm } from '@/lib/api/client';
+import { usePlaces } from '@/lib/places/hooks';
+import type { Place } from '@/lib/api/client';
 
-function triggerLabel(alarm: Alarm, t: (k: string) => string): string {
-  switch (alarm.triggerType) {
-    case 'time':
-      return t('alarms.trigger.time');
-    case 'location':
-      return t('alarms.trigger.location');
-    case 'time_and_location':
-      return t('alarms.trigger.both');
-  }
-}
-
-function AlarmRow({ alarm }: { alarm: Alarm }) {
-  const { t } = useTranslation();
+function PlaceRow({ place }: { place: Place }) {
   return (
-    <Link href={`/alarm/${alarm.id}` as never} asChild>
+    <Link href={`/place/${place.id}` as never} asChild>
       <Pressable className="flex-row items-center bg-white border border-gray-200 rounded-lg px-4 py-3 mb-2 active:bg-gray-50">
-        <View className="w-10 h-10 rounded-full bg-blue-100 items-center justify-center mr-3">
-          <Ionicons
-            name={alarm.triggerType === 'location' ? 'location' : 'alarm'}
-            size={20}
-            color="#2563EB"
-          />
+        <View
+          className="w-10 h-10 rounded-full items-center justify-center mr-3"
+          style={{ backgroundColor: place.color ?? '#3B82F6' }}
+        >
+          <Ionicons name="location" size={20} color="#fff" />
         </View>
         <View className="flex-1">
           <Text className="text-base font-semibold text-gray-900" numberOfLines={1}>
-            {alarm.title}
+            {place.name}
           </Text>
-          <Text className="text-xs text-gray-500">{triggerLabel(alarm, t)}</Text>
+          <Text className="text-xs text-gray-500" numberOfLines={1}>
+            {place.address ?? `${place.latitude.toFixed(4)}, ${place.longitude.toFixed(4)}`}
+          </Text>
         </View>
-        {!alarm.isActive && (
-          <Text className="text-xs text-gray-400 italic">{t('common.paused')}</Text>
-        )}
+        <Text className="text-xs text-gray-400">{place.radiusMeters}m</Text>
       </Pressable>
     </Link>
   );
 }
 
-export default function AgendaScreen() {
+export default function PlacesScreen() {
   const { t } = useTranslation();
-  const { data: alarms, isLoading, error, refetch, isRefetching } = useAlarms();
+  const { data: places, isLoading, error, refetch, isRefetching } = usePlaces();
 
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
       <View className="flex-row items-center justify-between px-6 pt-2 pb-4">
-        <Text className="text-2xl font-bold text-gray-900">{t('tabs.agenda')}</Text>
-        <Link href={'/alarm/new' as never} asChild>
+        <Text className="text-2xl font-bold text-gray-900">{t('tabs.places')}</Text>
+        <Link href={'/place/new' as never} asChild>
           <Pressable className="w-10 h-10 rounded-full bg-blue-600 items-center justify-center active:bg-blue-700">
             <Ionicons name="add" size={24} color="#fff" />
           </Pressable>
@@ -74,20 +61,20 @@ export default function AgendaScreen() {
         </View>
       ) : (
         <FlatList
-          data={alarms}
-          keyExtractor={(a) => a.id}
+          data={places}
+          keyExtractor={(p) => p.id}
           contentContainerStyle={{ padding: 16, paddingTop: 0 }}
-          renderItem={({ item }) => <AlarmRow alarm={item} />}
+          renderItem={({ item }) => <PlaceRow place={item} />}
           refreshing={isRefetching}
           onRefresh={refetch}
           ListEmptyComponent={
             <View className="items-center mt-16 px-6">
-              <Ionicons name="alarm-outline" size={48} color="#9CA3AF" />
+              <Ionicons name="location-outline" size={48} color="#9CA3AF" />
               <Text className="text-gray-500 text-center mt-3">
-                {t('alarms.empty')}
+                {t('places.empty')}
               </Text>
               <Text className="text-gray-400 text-sm text-center mt-1">
-                {t('alarms.emptyHint')}
+                {t('places.emptyHint')}
               </Text>
             </View>
           }

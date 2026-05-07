@@ -9,7 +9,16 @@
     "delete": "Elimina",
     "edit": "Edita",
     "loading": "Carregant…",
-    "back": "Torna"
+    "back": "Torna",
+    "paused": "pausada",
+    "errorLoading": "No s'ha pogut carregar.",
+    "retry": "Reintenta",
+    "comingSoon": "Properament"
+  },
+  "tabs": {
+    "agenda": "Agenda",
+    "places": "Llocs",
+    "settings": "Ajustos"
   },
   "auth": {
     "login": {
@@ -46,8 +55,28 @@
     },
     "logout": "Tanca sessió"
   },
-  "home": {
-    "greeting": "Hola, {{name}}",
-    "placeholder": "Aquí apareixeran les teves alarmes"
+  "alarms": {
+    "empty": "Encara no tens alarmes",
+    "emptyHint": "Toca el + per crear la primera",
+    "newTitle": "Nova alarma",
+    "detailTitle": "Alarma",
+    "newComingSoon": "L'assistent de creació arriba en el següent pas de la Fase 3.",
+    "detailComingSoon": "El detall i l'edició arriben en la propera iteració.",
+    "trigger": {
+      "time": "Per hora",
+      "location": "Per lloc",
+      "both": "Hora i lloc"
+    }
+  },
+  "places": {
+    "empty": "Encara no tens llocs guardats",
+    "emptyHint": "Toca el + per afegir el primer",
+    "newTitle": "Nou lloc",
+    "detailTitle": "Lloc",
+    "newComingSoon": "El selector amb mapa arriba en el següent pas de la Fase 3.",
+    "detailComingSoon": "El detall i l'edició arriben en la propera iteració."
+  },
+  "settings": {
+    "language": "Idioma"
   }
 }
