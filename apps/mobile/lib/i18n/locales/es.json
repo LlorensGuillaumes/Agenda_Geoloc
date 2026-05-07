@@ -8,6 +8,46 @@
     "cancel": "Cancelar",
     "delete": "Eliminar",
     "edit": "Editar",
-    "loading": "Cargando…"
+    "loading": "Cargando…",
+    "back": "Volver"
+  },
+  "auth": {
+    "login": {
+      "title": "Bienvenido de nuevo",
+      "subtitle": "Inicia sesión para continuar",
+      "email": "Email",
+      "password": "Contraseña",
+      "submit": "Iniciar sesión",
+      "submitting": "Iniciando sesión…",
+      "noAccount": "¿No tienes cuenta?",
+      "goToRegister": "Regístrate",
+      "forgotPassword": "¿Has olvidado la contraseña?"
+    },
+    "register": {
+      "title": "Crea tu cuenta",
+      "subtitle": "Empieza a organizar tus alarmas",
+      "name": "Nombre",
+      "email": "Email",
+      "password": "Contraseña (mín. 8)",
+      "submit": "Crear cuenta",
+      "submitting": "Creando cuenta…",
+      "hasAccount": "¿Ya tienes cuenta?",
+      "goToLogin": "Inicia sesión"
+    },
+    "forgot": {
+      "title": "Recuperar contraseña",
+      "comingSoon": "Próximamente. Necesitamos configurar el envío de email para recuperar la contraseña.",
+      "backToLogin": "Volver al inicio de sesión"
+    },
+    "errors": {
+      "invalidCredentials": "Email o contraseña incorrectos",
+      "emailTaken": "Este email ya está registrado",
+      "generic": "Algo ha fallado. Inténtalo de nuevo."
+    },
+    "logout": "Cerrar sesión"
+  },
+  "home": {
+    "greeting": "Hola, {{name}}",
+    "placeholder": "Aquí aparecerán tus alarmas"
   }
 }

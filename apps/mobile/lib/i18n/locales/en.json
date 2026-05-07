@@ -8,6 +8,46 @@
     "cancel": "Cancel",
     "delete": "Delete",
     "edit": "Edit",
-    "loading": "Loading…"
+    "loading": "Loading…",
+    "back": "Back"
+  },
+  "auth": {
+    "login": {
+      "title": "Welcome back",
+      "subtitle": "Sign in to continue",
+      "email": "Email",
+      "password": "Password",
+      "submit": "Sign in",
+      "submitting": "Signing in…",
+      "noAccount": "Don't have an account?",
+      "goToRegister": "Sign up",
+      "forgotPassword": "Forgot your password?"
+    },
+    "register": {
+      "title": "Create your account",
+      "subtitle": "Start organizing your reminders",
+      "name": "Name",
+      "email": "Email",
+      "password": "Password (min 8)",
+      "submit": "Create account",
+      "submitting": "Creating account…",
+      "hasAccount": "Already have an account?",
+      "goToLogin": "Sign in"
+    },
+    "forgot": {
+      "title": "Reset password",
+      "comingSoon": "Coming soon. Email-based password reset isn't configured yet.",
+      "backToLogin": "Back to sign in"
+    },
+    "errors": {
+      "invalidCredentials": "Invalid email or password",
+      "emailTaken": "This email is already registered",
+      "generic": "Something went wrong. Please try again."
+    },
+    "logout": "Sign out"
+  },
+  "home": {
+    "greeting": "Hello, {{name}}",
+    "placeholder": "Your reminders will show up here"
   }
 }

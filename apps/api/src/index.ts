@@ -57,6 +57,6 @@ app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
   res.status(500).json({ error: 'InternalServerError' });
 });
 
-app.listen(env.PORT, '127.0.0.1', () => {
-  console.log(`[api] listening on http://127.0.0.1:${env.PORT} (${env.NODE_ENV})`);
+app.listen(env.PORT, () => {
+  console.log(`[api] listening on http://0.0.0.0:${env.PORT} (${env.NODE_ENV})`);
 });

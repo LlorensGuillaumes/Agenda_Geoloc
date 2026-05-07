@@ -1,5 +1,6 @@
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
+import { bearer } from 'better-auth/plugins';
 import { db } from './db.js';
 import { env } from './env.js';
 import * as schema from '@agenda/db';
@@ -41,6 +42,7 @@ export const auth = betterAuth({
     // Para testear en dispositivo físico vía LAN, añade aquí tu IP local,
     // p.ej. 'http://192.168.1.42:8081' y 'exp://192.168.1.42:8081'.
   ],
+  plugins: [bearer()],
 });
 
 export type Session = typeof auth.$Infer.Session;

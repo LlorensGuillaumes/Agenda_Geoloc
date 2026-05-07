@@ -8,6 +8,46 @@
     "cancel": "Cancel·la",
     "delete": "Elimina",
     "edit": "Edita",
-    "loading": "Carregant…"
+    "loading": "Carregant…",
+    "back": "Torna"
+  },
+  "auth": {
+    "login": {
+      "title": "Benvingut/da de nou",
+      "subtitle": "Inicia la sessió per continuar",
+      "email": "Email",
+      "password": "Contrasenya",
+      "submit": "Inicia sessió",
+      "submitting": "Iniciant sessió…",
+      "noAccount": "No tens compte?",
+      "goToRegister": "Registra't",
+      "forgotPassword": "Has oblidat la contrasenya?"
+    },
+    "register": {
+      "title": "Crea el teu compte",
+      "subtitle": "Comença a organitzar les teves alarmes",
+      "name": "Nom",
+      "email": "Email",
+      "password": "Contrasenya (mín. 8)",
+      "submit": "Crea compte",
+      "submitting": "Creant compte…",
+      "hasAccount": "Ja tens compte?",
+      "goToLogin": "Inicia sessió"
+    },
+    "forgot": {
+      "title": "Recupera la contrasenya",
+      "comingSoon": "Properament. Cal configurar l'enviament d'email per recuperar la contrasenya.",
+      "backToLogin": "Torna a l'inici de sessió"
+    },
+    "errors": {
+      "invalidCredentials": "Email o contrasenya incorrectes",
+      "emailTaken": "Aquest email ja està registrat",
+      "generic": "Alguna cosa ha fallat. Torna-ho a intentar."
+    },
+    "logout": "Tanca sessió"
+  },
+  "home": {
+    "greeting": "Hola, {{name}}",
+    "placeholder": "Aquí apareixeran les teves alarmes"
   }
 }
