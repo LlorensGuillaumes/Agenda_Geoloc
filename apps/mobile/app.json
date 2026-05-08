@@ -42,7 +42,11 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "Permite a Agenda usar tu ubicación para guardar lugares en el mapa."
+          "locationWhenInUsePermission": "Permite a Agenda usar tu ubicación para guardar lugares en el mapa.",
+          "locationAlwaysAndWhenInUsePermission": "Permite a Agenda usar tu ubicación incluso en segundo plano para disparar alarmas cuando llegues o salgas de los lugares guardados.",
+          "isIosBackgroundLocationEnabled": true,
+          "isAndroidBackgroundLocationEnabled": true,
+          "isAndroidForegroundServiceEnabled": true
         }
       ],
       [

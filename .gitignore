@@ -43,11 +43,10 @@ expo-env.d.ts
 *.mobileprovision
 *.orig.*
 
-# Native
+# Native — generados por `expo prebuild` / `expo run:*`. No los commiteamos
+# para que sean siempre regenerables desde app.json + plugins.
 android/
 ios/
-!apps/mobile/android/
-!apps/mobile/ios/
 
 # Drizzle
 drizzle/migrations/meta/_journal.json.bak

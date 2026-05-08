@@ -109,6 +109,16 @@
     "searchError": "Could not look up the address."
   },
   "settings": {
-    "language": "Language"
+    "language": "Language",
+    "permissions": {
+      "title": "Permissions and geofencing",
+      "locationWhenInUse": "Location while using the app",
+      "locationAlways": "Background location",
+      "notifications": "Notifications",
+      "geofencingActive": "Geofencing watch active",
+      "requestAlways": "Grant permissions",
+      "openSystemSettings": "Open system settings",
+      "alwaysHelp": "For place-based alarms to fire when the app is closed, iOS and Android require the \"Always allow\" location permission. Without it, alarms only fire while the app is open."
+    }
   }
 }

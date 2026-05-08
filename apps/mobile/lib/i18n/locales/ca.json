@@ -109,6 +109,16 @@
     "searchError": "No s'ha pogut cercar l'adreça."
   },
   "settings": {
-    "language": "Idioma"
+    "language": "Idioma",
+    "permissions": {
+      "title": "Permisos i geofencing",
+      "locationWhenInUse": "Ubicació mentre uses l'app",
+      "locationAlways": "Ubicació en segon pla",
+      "notifications": "Notificacions",
+      "geofencingActive": "Vigilància de zones activa",
+      "requestAlways": "Concedeix permisos",
+      "openSystemSettings": "Obre la configuració del sistema",
+      "alwaysHelp": "Perquè les alarmes per lloc disparin amb l'app tancada, iOS i Android necessiten el permís \"Permet sempre\" d'ubicació. Sense ell, només dispararan mentre l'app estigui oberta."
+    }
   }
 }

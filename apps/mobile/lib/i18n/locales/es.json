@@ -109,6 +109,16 @@
     "searchError": "No se ha podido buscar la dirección."
   },
   "settings": {
-    "language": "Idioma"
+    "language": "Idioma",
+    "permissions": {
+      "title": "Permisos y geofencing",
+      "locationWhenInUse": "Ubicación al usar la app",
+      "locationAlways": "Ubicación en segundo plano",
+      "notifications": "Notificaciones",
+      "geofencingActive": "Vigilancia de zonas activa",
+      "requestAlways": "Conceder permisos",
+      "openSystemSettings": "Abrir ajustes del sistema",
+      "alwaysHelp": "Para que las alarmas por lugar disparen aunque la app esté cerrada, Android e iOS necesitan el permiso \"Permitir siempre\" de ubicación. Sin él, solo dispararán mientras la app esté abierta."
+    }
   }
 }
