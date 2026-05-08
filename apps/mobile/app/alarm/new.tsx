@@ -32,6 +32,10 @@ import { scheduleAlarmNotification } from '@/lib/notifications';
 type TriggerType = 'time' | 'location' | 'time_and_location';
 type LocationMode = 'saved_place' | 'custom_point';
 type LocationEvent = 'enter' | 'exit' | 'nearby';
+type RepeatMode = 'once' | 'daily' | 'weekly';
+
+// Render order: lunes a domingo. Values son JS Date.getDay() (0=Sunday).
+const WEEKDAY_VALUES = [1, 2, 3, 4, 5, 6, 0] as const;
 
 const DEFAULT_REGION: Region = {
   latitude: 41.3851,
@@ -194,6 +198,8 @@ export default function NewAlarmScreen() {
   const [date, setDate] = useState(nextHour());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
+  const [repeat, setRepeat] = useState<RepeatMode>('once');
+  const [weekdays, setWeekdays] = useState<number[]>([]);
 
   // Location
   const [locationMode, setLocationMode] = useState<LocationMode>('saved_place');
@@ -248,8 +254,12 @@ export default function NewAlarmScreen() {
       Alert.alert(t('common.error'), t('alarms.triggerRequired'));
       return;
     }
-    if (includesTime && date.getTime() <= Date.now()) {
+    if (includesTime && repeat === 'once' && date.getTime() <= Date.now()) {
       Alert.alert(t('common.error'), t('alarms.dateInPast'));
+      return;
+    }
+    if (includesTime && repeat === 'weekly' && weekdays.length === 0) {
+      Alert.alert(t('common.error'), t('alarms.weekdayRequired'));
       return;
     }
     if (includesLocation && locationMode === 'saved_place' && !savedPlaceId) {
@@ -258,7 +268,11 @@ export default function NewAlarmScreen() {
     }
 
     const timeConfig: TimeConfig | undefined = includesTime
-      ? { datetime: date.toISOString(), repeat: 'once' }
+      ? {
+          datetime: date.toISOString(),
+          repeat,
+          weekdays: repeat === 'weekly' ? weekdays : undefined,
+        }
       : undefined;
 
     const locationConfig: LocationConfig | undefined = includesLocation
@@ -287,12 +301,12 @@ export default function NewAlarmScreen() {
         locationConfig,
       });
 
-      if (includesTime && timeConfig?.datetime) {
+      if (includesTime && timeConfig) {
         await scheduleAlarmNotification({
           alarmId: created.id,
           title: created.title,
           body: created.notes ?? undefined,
-          datetime: timeConfig.datetime,
+          timeConfig,
         });
       }
 
@@ -371,15 +385,17 @@ export default function NewAlarmScreen() {
           {includesTime && (
             <Section title={t('alarms.timeSection')}>
               <View className="flex-row">
-                <Pressable
-                  onPress={() => setShowDatePicker(true)}
-                  className="flex-1 bg-white border border-gray-300 rounded-lg px-4 py-3 mr-2 flex-row items-center"
-                >
-                  <Ionicons name="calendar-outline" size={18} color="#374151" />
-                  <Text className="ml-2 text-gray-900">
-                    {formatDate(date, i18n.language)}
-                  </Text>
-                </Pressable>
+                {repeat === 'once' && (
+                  <Pressable
+                    onPress={() => setShowDatePicker(true)}
+                    className="flex-1 bg-white border border-gray-300 rounded-lg px-4 py-3 mr-2 flex-row items-center"
+                  >
+                    <Ionicons name="calendar-outline" size={18} color="#374151" />
+                    <Text className="ml-2 text-gray-900">
+                      {formatDate(date, i18n.language)}
+                    </Text>
+                  </Pressable>
+                )}
                 <Pressable
                   onPress={() => setShowTimePicker(true)}
                   className="flex-1 bg-white border border-gray-300 rounded-lg px-4 py-3 flex-row items-center"
@@ -406,6 +422,70 @@ export default function NewAlarmScreen() {
                   display={Platform.OS === 'ios' ? 'spinner' : 'default'}
                   onChange={onChangeTime}
                 />
+              )}
+
+              <Text className="text-xs text-gray-500 mt-4 mb-2 px-1">
+                {t('alarms.repeatLabel')}
+              </Text>
+              <View className="flex-row -mx-1">
+                <PillButton
+                  selected={repeat === 'once'}
+                  label={t('alarms.repeatOnce')}
+                  onPress={() => setRepeat('once')}
+                />
+                <PillButton
+                  selected={repeat === 'daily'}
+                  label={t('alarms.repeatDaily')}
+                  onPress={() => setRepeat('daily')}
+                />
+                <PillButton
+                  selected={repeat === 'weekly'}
+                  label={t('alarms.repeatWeekly')}
+                  onPress={() => setRepeat('weekly')}
+                />
+              </View>
+
+              {repeat === 'weekly' && (
+                <View className="mt-3">
+                  <Text className="text-xs text-gray-500 mb-2 px-1">
+                    {t('alarms.weekdaysLabel')}
+                  </Text>
+                  <View className="flex-row justify-between">
+                    {WEEKDAY_VALUES.map((day, i) => {
+                      const labels = t('alarms.weekdayInitials', {
+                        returnObjects: true,
+                      }) as string[];
+                      const selected = weekdays.includes(day);
+                      return (
+                        <Pressable
+                          key={day}
+                          onPress={() =>
+                            setWeekdays((prev) =>
+                              prev.includes(day)
+                                ? prev.filter((d) => d !== day)
+                                : [...prev, day],
+                            )
+                          }
+                          className={`w-10 h-10 rounded-full items-center justify-center ${
+                            selected
+                              ? 'bg-blue-600'
+                              : 'bg-white border border-gray-300'
+                          }`}
+                        >
+                          <Text
+                            className={
+                              selected
+                                ? 'text-white font-medium'
+                                : 'text-gray-700'
+                            }
+                          >
+                            {labels[i]}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                </View>
               )}
             </Section>
           )}

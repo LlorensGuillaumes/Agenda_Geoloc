@@ -95,7 +95,15 @@
     "unknownPlace": "Lloc esborrat",
     "activeToggle": "Activa",
     "activeOn": "Dispararà quan es compleixi la condició.",
-    "activeOff": "Pausada. No dispararà."
+    "activeOff": "Pausada. No dispararà.",
+    "repeatLabel": "Repetició",
+    "repeatOnce": "Una vegada",
+    "repeatDaily": "Cada dia",
+    "repeatWeekly": "Cada setmana",
+    "repeatEveryDay": "Cada dia",
+    "weekdaysLabel": "Dies",
+    "weekdayInitials": ["dl", "dt", "dc", "dj", "dv", "ds", "dg"],
+    "weekdayRequired": "Tria almenys un dia de la setmana."
   },
   "places": {
     "empty": "Encara no tens llocs guardats",

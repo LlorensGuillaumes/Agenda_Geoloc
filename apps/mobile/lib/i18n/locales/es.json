@@ -95,7 +95,15 @@
     "unknownPlace": "Lugar borrado",
     "activeToggle": "Activa",
     "activeOn": "Disparará cuando se cumpla la condición.",
-    "activeOff": "Pausada. No disparará."
+    "activeOff": "Pausada. No disparará.",
+    "repeatLabel": "Repetición",
+    "repeatOnce": "Una vez",
+    "repeatDaily": "Cada día",
+    "repeatWeekly": "Cada semana",
+    "repeatEveryDay": "Cada día",
+    "weekdaysLabel": "Días",
+    "weekdayInitials": ["L", "M", "X", "J", "V", "S", "D"],
+    "weekdayRequired": "Selecciona al menos un día de la semana."
   },
   "places": {
     "empty": "Aún no tienes lugares guardados",

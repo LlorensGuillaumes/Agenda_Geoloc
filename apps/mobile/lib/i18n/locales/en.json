@@ -95,7 +95,15 @@
     "unknownPlace": "Deleted place",
     "activeToggle": "Active",
     "activeOn": "Will fire when the condition matches.",
-    "activeOff": "Paused. Will not fire."
+    "activeOff": "Paused. Will not fire.",
+    "repeatLabel": "Repeat",
+    "repeatOnce": "Once",
+    "repeatDaily": "Every day",
+    "repeatWeekly": "Every week",
+    "repeatEveryDay": "Every day",
+    "weekdaysLabel": "Days",
+    "weekdayInitials": ["M", "T", "W", "T", "F", "S", "S"],
+    "weekdayRequired": "Pick at least one weekday."
   },
   "places": {
     "empty": "No saved places yet",

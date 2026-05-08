@@ -40,6 +40,35 @@ function formatDateTime(iso: string, lang: string): string {
   }).format(new Date(iso));
 }
 
+function formatTime(iso: string, lang: string): string {
+  return new Intl.DateTimeFormat(lang, {
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(iso));
+}
+
+function describeTimeConfig(
+  cfg: NonNullable<Alarm['timeConfig']>,
+  lang: string,
+  weekdayLabels: string[],
+  every: string,
+): string {
+  if (cfg.repeat === 'daily' && cfg.datetime) {
+    return `${every} · ${formatTime(cfg.datetime, lang)}`;
+  }
+  if (cfg.repeat === 'weekly' && cfg.datetime) {
+    const days = (cfg.weekdays ?? [])
+      .map((d) => {
+        // value 0=Sunday..6=Saturday → index in [Mon..Sun]
+        const idx = d === 0 ? 6 : d - 1;
+        return weekdayLabels[idx];
+      })
+      .join(' ');
+    return `${days || '—'} · ${formatTime(cfg.datetime, lang)}`;
+  }
+  return cfg.datetime ? formatDateTime(cfg.datetime, lang) : '';
+}
+
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
     <View className="flex-row justify-between items-start py-2">
@@ -99,12 +128,12 @@ export default function AlarmDetailScreen() {
       // Reanudar: re-schedule si tiene timeConfig
       if (!newActive) {
         await cancelAlarmNotificationByAlarmId(alarm.id);
-      } else if (alarm.timeConfig?.datetime) {
+      } else if (alarm.timeConfig) {
         await scheduleAlarmNotification({
           alarmId: alarm.id,
           title: alarm.title,
           body: alarm.notes ?? undefined,
-          datetime: alarm.timeConfig.datetime,
+          timeConfig: alarm.timeConfig,
         });
       }
     } catch (err) {
@@ -183,7 +212,12 @@ export default function AlarmDetailScreen() {
             {alarm.timeConfig?.datetime && (
               <InfoRow
                 label={t('alarms.timeSection')}
-                value={formatDateTime(alarm.timeConfig.datetime, i18n.language)}
+                value={describeTimeConfig(
+                  alarm.timeConfig,
+                  i18n.language,
+                  t('alarms.weekdayInitials', { returnObjects: true }) as string[],
+                  t('alarms.repeatEveryDay'),
+                )}
               />
             )}
             {alarm.locationConfig && (
