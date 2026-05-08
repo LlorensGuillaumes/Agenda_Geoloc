@@ -102,7 +102,11 @@
     "tapToMove": "Tap the map or drag the pin to adjust the position.",
     "locating": "Locating you…",
     "nameRequired": "Give the place a name.",
-    "createError": "Could not save the place."
+    "createError": "Could not save the place.",
+    "search": "Search",
+    "searchPlaceholder": "Street, city, postcode…",
+    "searchNoResults": "No address found.",
+    "searchError": "Could not look up the address."
   },
   "settings": {
     "language": "Language"

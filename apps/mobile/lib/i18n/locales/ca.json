@@ -102,7 +102,11 @@
     "tapToMove": "Toca el mapa o arrossega el pin per ajustar la posició.",
     "locating": "Localitzant-te…",
     "nameRequired": "Posa un nom al lloc.",
-    "createError": "No s'ha pogut desar el lloc."
+    "createError": "No s'ha pogut desar el lloc.",
+    "search": "Cerca",
+    "searchPlaceholder": "Carrer, ciutat, codi postal…",
+    "searchNoResults": "No s'ha trobat aquesta adreça.",
+    "searchError": "No s'ha pogut cercar l'adreça."
   },
   "settings": {
     "language": "Idioma"

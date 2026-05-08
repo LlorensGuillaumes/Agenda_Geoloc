@@ -45,6 +45,35 @@ export default function NewPlaceScreen() {
   const [color, setColor] = useState(COLORS[0]);
   const [locating, setLocating] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [query, setQuery] = useState('');
+  const [searching, setSearching] = useState(false);
+
+  const handleSearch = async () => {
+    const q = query.trim();
+    if (!q) return;
+    setSearching(true);
+    try {
+      const results = await Location.geocodeAsync(q);
+      if (results.length === 0) {
+        Alert.alert(t('common.error'), t('places.searchNoResults'));
+        return;
+      }
+      const first = results[0];
+      const next: Region = {
+        latitude: first.latitude,
+        longitude: first.longitude,
+        latitudeDelta: 0.01,
+        longitudeDelta: 0.01,
+      };
+      setMarker({ latitude: first.latitude, longitude: first.longitude });
+      setRegion(next);
+      mapRef.current?.animateToRegion(next, 600);
+    } catch {
+      Alert.alert(t('common.error'), t('places.searchError'));
+    } finally {
+      setSearching(false);
+    }
+  };
 
   useEffect(() => {
     (async () => {
@@ -129,6 +158,40 @@ export default function NewPlaceScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         className="flex-1"
       >
+        <View className="flex-row px-4 py-2 bg-gray-50 border-b border-gray-200">
+          <View className="flex-1 flex-row items-center bg-white border border-gray-300 rounded-lg px-3 py-2 mr-2">
+            <Ionicons name="search" size={18} color="#6B7280" />
+            <TextInput
+              value={query}
+              onChangeText={setQuery}
+              onSubmitEditing={handleSearch}
+              placeholder={t('places.searchPlaceholder')}
+              placeholderTextColor="#9CA3AF"
+              className="flex-1 ml-2 text-base text-gray-900"
+              returnKeyType="search"
+              autoCorrect={false}
+            />
+            {query.length > 0 && (
+              <Pressable onPress={() => setQuery('')} hitSlop={6}>
+                <Ionicons name="close-circle" size={18} color="#9CA3AF" />
+              </Pressable>
+            )}
+          </View>
+          <Pressable
+            onPress={handleSearch}
+            disabled={searching || !query.trim()}
+            className={`px-4 rounded-lg justify-center ${
+              searching || !query.trim() ? 'bg-blue-300' : 'bg-blue-600 active:bg-blue-700'
+            }`}
+          >
+            {searching ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Text className="text-white font-medium">{t('places.search')}</Text>
+            )}
+          </Pressable>
+        </View>
+
         <View style={{ height: 280 }}>
           <MapView
             ref={mapRef}

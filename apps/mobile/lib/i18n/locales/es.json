@@ -102,7 +102,11 @@
     "tapToMove": "Toca el mapa o arrastra el pin para ajustar la posición.",
     "locating": "Localizándote…",
     "nameRequired": "Pon un nombre al lugar.",
-    "createError": "No se ha podido guardar el lugar."
+    "createError": "No se ha podido guardar el lugar.",
+    "search": "Buscar",
+    "searchPlaceholder": "Calle, ciudad, código postal…",
+    "searchNoResults": "No se ha encontrado esa dirección.",
+    "searchError": "No se ha podido buscar la dirección."
   },
   "settings": {
     "language": "Idioma"
