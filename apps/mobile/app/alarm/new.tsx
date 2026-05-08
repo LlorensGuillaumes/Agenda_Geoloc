@@ -202,7 +202,7 @@ export default function NewAlarmScreen() {
     latitude: DEFAULT_REGION.latitude,
     longitude: DEFAULT_REGION.longitude,
   });
-  const [customRadius, setCustomRadius] = useState(200);
+  const [customRadius, setCustomRadius] = useState(50);
   const [event, setEvent] = useState<LocationEvent>('enter');
 
   const includesTime = triggerType === 'time' || triggerType === 'time_and_location';

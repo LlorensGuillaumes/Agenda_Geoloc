@@ -41,7 +41,7 @@ export default function NewPlaceScreen() {
     longitude: DEFAULT_REGION.longitude,
   });
   const [name, setName] = useState('');
-  const [radius, setRadius] = useState(150);
+  const [radius, setRadius] = useState(50);
   const [color, setColor] = useState(COLORS[0]);
   const [locating, setLocating] = useState(true);
   const [submitting, setSubmitting] = useState(false);
