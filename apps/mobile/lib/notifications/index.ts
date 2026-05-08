@@ -1,4 +1,7 @@
 import * as Notifications from 'expo-notifications';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const NOTIF_PREFIX = 'alarm-notif:';
 
 // Cómo se muestra una notificación cuando llega con la app en foreground.
 Notifications.setNotificationHandler({
@@ -30,7 +33,11 @@ export async function scheduleAlarmNotification(args: {
   if (Number.isNaN(date.getTime()) || date.getTime() <= Date.now()) {
     return null;
   }
-  return Notifications.scheduleNotificationAsync({
+
+  // Cancela cualquier notificación previa para esta alarma (caso de edición).
+  await cancelAlarmNotificationByAlarmId(args.alarmId);
+
+  const notifId = await Notifications.scheduleNotificationAsync({
     content: {
       title: args.title,
       body: args.body ?? '',
@@ -41,12 +48,20 @@ export async function scheduleAlarmNotification(args: {
       date,
     },
   });
+  await AsyncStorage.setItem(`${NOTIF_PREFIX}${args.alarmId}`, notifId);
+  return notifId;
 }
 
-export async function cancelAlarmNotification(notifId: string): Promise<void> {
+export async function cancelAlarmNotificationByAlarmId(
+  alarmId: string,
+): Promise<void> {
   try {
-    await Notifications.cancelScheduledNotificationAsync(notifId);
+    const stored = await AsyncStorage.getItem(`${NOTIF_PREFIX}${alarmId}`);
+    if (stored) {
+      await Notifications.cancelScheduledNotificationAsync(stored).catch(() => {});
+    }
+    await AsyncStorage.removeItem(`${NOTIF_PREFIX}${alarmId}`);
   } catch {
-    // Si ya disparó o no existe, ignoramos.
+    // ignore
   }
 }
