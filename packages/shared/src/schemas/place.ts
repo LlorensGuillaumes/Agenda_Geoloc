@@ -4,7 +4,7 @@ export const placeSchema = z.object({
   name: z.string().min(1).max(100),
   latitude: z.number().min(-90).max(90),
   longitude: z.number().min(-180).max(180),
-  radiusMeters: z.number().int().min(50).max(5000).default(50),
+  radiusMeters: z.number().int().min(20).max(5000).default(50),
   icon: z.string().optional(),
   color: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
   address: z.string().optional(),

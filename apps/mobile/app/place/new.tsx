@@ -252,7 +252,7 @@ export default function NewPlaceScreen() {
           </View>
           <Slider
             value={radius}
-            minimumValue={50}
+            minimumValue={20}
             maximumValue={2000}
             step={10}
             onValueChange={setRadius}

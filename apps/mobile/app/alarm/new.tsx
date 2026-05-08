@@ -503,7 +503,7 @@ export default function NewAlarmScreen() {
                   </View>
                   <Slider
                     value={customRadius}
-                    minimumValue={50}
+                    minimumValue={20}
                     maximumValue={2000}
                     step={10}
                     onValueChange={setCustomRadius}
