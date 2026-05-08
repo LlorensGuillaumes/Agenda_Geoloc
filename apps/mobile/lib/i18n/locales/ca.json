@@ -103,7 +103,11 @@
     "repeatEveryDay": "Cada dia",
     "weekdaysLabel": "Dies",
     "weekdayInitials": ["dl", "dt", "dc", "dj", "dv", "ds", "dg"],
-    "weekdayRequired": "Tria almenys un dia de la setmana."
+    "weekdayRequired": "Tria almenys un dia de la setmana.",
+    "whenEnter": "en arribar",
+    "whenExit": "en sortir",
+    "whenNearby": "en passar a prop",
+    "customPointLabel": "Punt del mapa"
   },
   "places": {
     "empty": "Encara no tens llocs guardats",

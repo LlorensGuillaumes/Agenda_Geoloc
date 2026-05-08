@@ -103,7 +103,11 @@
     "repeatEveryDay": "Every day",
     "weekdaysLabel": "Days",
     "weekdayInitials": ["M", "T", "W", "T", "F", "S", "S"],
-    "weekdayRequired": "Pick at least one weekday."
+    "weekdayRequired": "Pick at least one weekday.",
+    "whenEnter": "on arrival",
+    "whenExit": "on leaving",
+    "whenNearby": "when passing by",
+    "customPointLabel": "Map point"
   },
   "places": {
     "empty": "No saved places yet",

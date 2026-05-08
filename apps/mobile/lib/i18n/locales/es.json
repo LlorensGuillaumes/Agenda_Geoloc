@@ -103,7 +103,11 @@
     "repeatEveryDay": "Cada día",
     "weekdaysLabel": "Días",
     "weekdayInitials": ["L", "M", "X", "J", "V", "S", "D"],
-    "weekdayRequired": "Selecciona al menos un día de la semana."
+    "weekdayRequired": "Selecciona al menos un día de la semana.",
+    "whenEnter": "al llegar",
+    "whenExit": "al salir",
+    "whenNearby": "al pasar cerca",
+    "customPointLabel": "Punto del mapa"
   },
   "places": {
     "empty": "Aún no tienes lugares guardados",
