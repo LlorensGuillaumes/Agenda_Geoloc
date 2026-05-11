@@ -14,7 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
-import MapView, { Marker, Circle, type Region } from 'react-native-maps';
+import { type CameraRef } from '@maplibre/maplibre-react-native';
 import Slider from '@react-native-community/slider';
 import { ApiError } from '@/lib/api/client';
 import {
@@ -22,6 +22,7 @@ import {
   useUpdatePlace,
   useDeletePlace,
 } from '@/lib/places/hooks';
+import { GeofenceMap, type LatLng } from '@/components/geofence-map';
 
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'];
 
@@ -31,12 +32,12 @@ export default function PlaceDetailScreen() {
   const placesQuery = usePlaces();
   const updatePlace = useUpdatePlace();
   const deletePlace = useDeletePlace();
-  const mapRef = useRef<MapView | null>(null);
+  const cameraRef = useRef<CameraRef>(null);
 
   const place = placesQuery.data?.find((p) => p.id === id);
 
   const [name, setName] = useState('');
-  const [marker, setMarker] = useState({ latitude: 0, longitude: 0 });
+  const [marker, setMarker] = useState<LatLng>({ latitude: 0, longitude: 0 });
   const [radius, setRadius] = useState(50);
   const [color, setColor] = useState(COLORS[0]);
   const [submitting, setSubmitting] = useState(false);
@@ -48,6 +49,11 @@ export default function PlaceDetailScreen() {
     setMarker({ latitude: place.latitude, longitude: place.longitude });
     setRadius(place.radiusMeters);
     setColor(place.color ?? COLORS[0]);
+    cameraRef.current?.flyTo({
+      center: [place.longitude, place.latitude],
+      zoom: 15,
+      duration: 400,
+    });
   }, [place]);
 
   const handleSave = async () => {
@@ -140,13 +146,6 @@ export default function PlaceDetailScreen() {
     );
   }
 
-  const region: Region = {
-    latitude: marker.latitude,
-    longitude: marker.longitude,
-    latitudeDelta: 0.01,
-    longitudeDelta: 0.01,
-  };
-
   return (
     <SafeAreaView className="flex-1 bg-white" edges={['bottom']}>
       <Stack.Screen options={{ title: t('places.detailTitle'), headerShown: true }} />
@@ -155,26 +154,14 @@ export default function PlaceDetailScreen() {
         className="flex-1"
       >
         <View style={{ height: 240 }}>
-          <MapView
-            ref={mapRef}
-            style={{ flex: 1 }}
-            region={region}
-            onPress={(e) => setMarker(e.nativeEvent.coordinate)}
-          >
-            <Marker
-              coordinate={marker}
-              draggable
-              onDragEnd={(e) => setMarker(e.nativeEvent.coordinate)}
-              pinColor={color}
-            />
-            <Circle
-              center={marker}
-              radius={radius}
-              fillColor={`${color}33`}
-              strokeColor={color}
-              strokeWidth={2}
-            />
-          </MapView>
+          <GeofenceMap
+            ref={cameraRef}
+            center={marker}
+            radius={radius}
+            color={color}
+            onPressMap={setMarker}
+            initialZoom={15}
+          />
         </View>
 
         <ScrollView

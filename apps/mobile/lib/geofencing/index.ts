@@ -1,18 +1,68 @@
+import { Platform } from 'react-native';
 import * as TaskManager from 'expo-task-manager';
 import * as Location from 'expo-location';
 import * as Notifications from 'expo-notifications';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Alarm, Place } from '../api/client';
+import {
+  cancelConfirmation,
+  clearAllPolling,
+  startConfirmation,
+} from './polling';
+import { ALARM_CATEGORY, ALARM_CHANNEL_ID } from '../notifications';
 
 export const GEOFENCE_TASK = 'agenda.geofence-task';
 const CACHE_PREFIX = 'geofence:';
 const IOS_GEOFENCE_LIMIT = 20;
 
+/**
+ * Ratio del radio externo del geofence que se considera "centro" para la
+ * confirmación con polling. Ej. con radio externo 100m → confirmación a 30m.
+ * Mínimo absoluto 25m (por debajo el GPS no diferencia bien).
+ */
+const INNER_RADIUS_RATIO = 0.3;
+const INNER_RADIUS_MIN = 25;
+
 type CachedAlarmInfo = {
   title: string;
   notes: string | null;
   event: 'enter' | 'exit' | 'nearby';
+  centerLat: number;
+  centerLng: number;
+  outerRadius: number;
+  activeWindow?: {
+    start: string; // "HH:MM"
+    end: string; // "HH:MM"
+    weekdays?: number[]; // 0=domingo, 6=sábado
+  };
 };
+
+/**
+ * Comprueba si la fecha indicada cae dentro de la ventana activa.
+ *
+ * - Si `weekdays` está definido y el día actual no está, devuelve false.
+ * - Si `start <= end` (ej. 14:00–22:00): dentro si la hora actual cae dentro
+ *   del rango.
+ * - Si `start > end` (ej. 22:00–06:00, cruza medianoche): dentro si la hora
+ *   actual es >= start o < end.
+ */
+export function isInsideActiveWindow(
+  window: NonNullable<CachedAlarmInfo['activeWindow']>,
+  now: Date = new Date(),
+): boolean {
+  if (window.weekdays && window.weekdays.length > 0) {
+    if (!window.weekdays.includes(now.getDay())) return false;
+  }
+  const [sh, sm] = window.start.split(':').map(Number);
+  const [eh, em] = window.end.split(':').map(Number);
+  const cur = now.getHours() * 60 + now.getMinutes();
+  const start = sh * 60 + sm;
+  const end = eh * 60 + em;
+  if (start === end) return false;
+  if (start < end) return cur >= start && cur < end;
+  // Cruza medianoche
+  return cur >= start || cur < end;
+}
 
 type GeofenceTaskData = {
   eventType: Location.GeofencingEventType;
@@ -41,11 +91,43 @@ TaskManager.defineTask<GeofenceTaskData>(GEOFENCE_TASK, async ({ data, error }) 
     // Cache lost or corrupted; we still notify with a generic body.
   }
 
-  // El SO solo dispara los eventos que pedimos, pero defendemos por si acaso.
+  // Filtrar por evento que el usuario quiere (registramos siempre enter+exit
+  // para mantener el estado interno del SO, pero solo notificamos lo pedido).
   const wantedEnter = !info || info.event === 'enter' || info.event === 'nearby';
   const wantedExit = !info || info.event === 'exit';
+
+  // Si el usuario salió del radio externo antes de confirmar el enter,
+  // cancelamos el polling silenciosamente (no era el lugar de verdad).
+  if (!isEnter) {
+    await cancelConfirmation(region.identifier);
+  }
+
   if (isEnter && !wantedEnter) return;
   if (!isEnter && !wantedExit) return;
+
+  // Filtrar por ventana horaria si está definida.
+  if (info?.activeWindow && !isInsideActiveWindow(info.activeWindow)) return;
+
+  // Para ENTER preciso: arrancamos polling de confirmación. La notificación
+  // saldrá cuando el polling confirme que el usuario entró al radio interno.
+  // Para EXIT: notificamos al instante con el margen del radio externo
+  // (precisión ~radio configurado, suficiente para detectar "ya he salido").
+  if (isEnter && info) {
+    const innerRadius = Math.max(
+      INNER_RADIUS_MIN,
+      Math.round(info.outerRadius * INNER_RADIUS_RATIO),
+    );
+    await startConfirmation({
+      alarmId: region.identifier,
+      centerLat: info.centerLat,
+      centerLng: info.centerLng,
+      innerRadius,
+      event: info.event,
+      title: info.title,
+      notes: info.notes,
+    });
+    return;
+  }
 
   await Notifications.scheduleNotificationAsync({
     content: {
@@ -55,8 +137,10 @@ TaskManager.defineTask<GeofenceTaskData>(GEOFENCE_TASK, async ({ data, error }) 
         alarmId: region.identifier,
         eventType: isEnter ? 'enter' : 'exit',
       },
+      categoryIdentifier: ALARM_CATEGORY,
+      sound: 'default',
     },
-    trigger: null,
+    trigger: Platform.OS === 'android' ? { channelId: ALARM_CHANNEL_ID } : null,
   });
 });
 
@@ -113,22 +197,28 @@ export async function syncGeofences(input: {
       continue;
     }
 
-    const wantsEnter = cfg.event === 'enter' || cfg.event === 'nearby';
-    const wantsExit = cfg.event === 'exit';
-
+    // Registramos siempre AMBOS triggers aunque al usuario solo le interese uno.
+    // Si solo registras notifyOnEnter, el estado interno del geofence en
+    // Google Play Services nunca se actualiza al salir del radio, y al volver
+    // a entrar no se detecta cambio de estado → no dispara. Idem al revés.
+    // El filtrado por evento deseado se hace en el handler de TaskManager.
     candidates.push({
       region: {
         identifier: alarm.id,
         latitude,
         longitude,
         radius,
-        notifyOnEnter: wantsEnter,
-        notifyOnExit: wantsExit,
+        notifyOnEnter: true,
+        notifyOnExit: true,
       },
       cache: {
         title: alarm.title,
         notes: alarm.notes,
         event: cfg.event,
+        centerLat: latitude,
+        centerLng: longitude,
+        outerRadius: radius,
+        activeWindow: cfg.activeWindow,
       },
     });
   }
@@ -194,6 +284,11 @@ export async function unregisterAllGeofences(): Promise<void> {
     if (stale.length > 0) {
       await AsyncStorage.multiRemove(stale);
     }
+  } catch {
+    // ignore
+  }
+  try {
+    await clearAllPolling();
   } catch {
     // ignore
   }

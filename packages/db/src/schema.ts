@@ -166,6 +166,11 @@ export type LocationConfig = {
     radiusMeters: number;
   };
   event: 'enter' | 'exit' | 'nearby';
+  activeWindow?: {
+    start: string; // "HH:MM"
+    end: string; // "HH:MM"
+    weekdays?: number[]; // 0=domingo, 6=sábado
+  };
 };
 
 // ============================================================

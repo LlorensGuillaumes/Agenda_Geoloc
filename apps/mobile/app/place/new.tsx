@@ -14,32 +14,23 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
-import MapView, { Marker, Circle, type Region } from 'react-native-maps';
+import { type CameraRef } from '@maplibre/maplibre-react-native';
 import * as Location from 'expo-location';
 import Slider from '@react-native-community/slider';
 import { ApiError } from '@/lib/api/client';
 import { useCreatePlace } from '@/lib/places/hooks';
+import { GeofenceMap, type LatLng } from '@/components/geofence-map';
 
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'];
 
-// Default fallback (centro de Barcelona) si el usuario rechaza el permiso.
-const DEFAULT_REGION: Region = {
-  latitude: 41.3851,
-  longitude: 2.1734,
-  latitudeDelta: 0.05,
-  longitudeDelta: 0.05,
-};
+const DEFAULT_CENTER: LatLng = { latitude: 41.3851, longitude: 2.1734 };
 
 export default function NewPlaceScreen() {
   const { t } = useTranslation();
   const createPlace = useCreatePlace();
-  const mapRef = useRef<MapView | null>(null);
+  const cameraRef = useRef<CameraRef>(null);
 
-  const [region, setRegion] = useState<Region>(DEFAULT_REGION);
-  const [marker, setMarker] = useState({
-    latitude: DEFAULT_REGION.latitude,
-    longitude: DEFAULT_REGION.longitude,
-  });
+  const [marker, setMarker] = useState<LatLng>(DEFAULT_CENTER);
   const [name, setName] = useState('');
   const [radius, setRadius] = useState(50);
   const [color, setColor] = useState(COLORS[0]);
@@ -59,15 +50,12 @@ export default function NewPlaceScreen() {
         return;
       }
       const first = results[0];
-      const next: Region = {
-        latitude: first.latitude,
-        longitude: first.longitude,
-        latitudeDelta: 0.01,
-        longitudeDelta: 0.01,
-      };
       setMarker({ latitude: first.latitude, longitude: first.longitude });
-      setRegion(next);
-      mapRef.current?.animateToRegion(next, 600);
+      cameraRef.current?.flyTo({
+        center: [first.longitude, first.latitude],
+        zoom: 15,
+        duration: 600,
+      });
     } catch {
       Alert.alert(t('common.error'), t('places.searchError'));
     } finally {
@@ -86,15 +74,16 @@ export default function NewPlaceScreen() {
         const loc = await Location.getCurrentPositionAsync({
           accuracy: Location.Accuracy.Balanced,
         });
-        const userRegion: Region = {
+        const userPos: LatLng = {
           latitude: loc.coords.latitude,
           longitude: loc.coords.longitude,
-          latitudeDelta: 0.01,
-          longitudeDelta: 0.01,
         };
-        setRegion(userRegion);
-        setMarker({ latitude: loc.coords.latitude, longitude: loc.coords.longitude });
-        mapRef.current?.animateToRegion(userRegion, 600);
+        setMarker(userPos);
+        cameraRef.current?.flyTo({
+          center: [userPos.longitude, userPos.latitude],
+          zoom: 15,
+          duration: 600,
+        });
       } catch {
         // No location, seguimos con default
       } finally {
@@ -102,11 +91,6 @@ export default function NewPlaceScreen() {
       }
     })();
   }, []);
-
-  const handleMapPress = (event: { nativeEvent: { coordinate: { latitude: number; longitude: number } } }) => {
-    const { latitude, longitude } = event.nativeEvent.coordinate;
-    setMarker({ latitude, longitude });
-  };
 
   const handleSubmit = async () => {
     if (!name.trim()) {
@@ -193,28 +177,15 @@ export default function NewPlaceScreen() {
         </View>
 
         <View style={{ height: 280 }}>
-          <MapView
-            ref={mapRef}
-            style={{ flex: 1 }}
-            initialRegion={region}
-            onRegionChangeComplete={setRegion}
-            onPress={handleMapPress}
-            showsUserLocation
-          >
-            <Marker
-              coordinate={marker}
-              draggable
-              onDragEnd={(e) => setMarker(e.nativeEvent.coordinate)}
-              pinColor={color}
-            />
-            <Circle
-              center={marker}
-              radius={radius}
-              fillColor={`${color}33`}
-              strokeColor={color}
-              strokeWidth={2}
-            />
-          </MapView>
+          <GeofenceMap
+            ref={cameraRef}
+            center={marker}
+            radius={radius}
+            color={color}
+            onPressMap={setMarker}
+            showUserLocation
+            initialZoom={14}
+          />
           {locating && (
             <View className="absolute top-2 right-2 bg-white/90 rounded-full px-3 py-1 flex-row items-center">
               <ActivityIndicator size="small" color="#2563EB" />

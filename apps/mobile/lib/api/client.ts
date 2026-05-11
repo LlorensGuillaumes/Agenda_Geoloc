@@ -103,11 +103,18 @@ export type TimeConfig = {
   timeWindow?: { start: string; end: string };
 };
 
+export type ActiveWindow = {
+  start: string; // "HH:MM"
+  end: string; // "HH:MM"
+  weekdays?: number[]; // 0=domingo, 6=sábado
+};
+
 export type LocationConfig = {
   mode: 'saved_place' | 'custom_point';
   placeId?: string;
   customPoint?: { latitude: number; longitude: number; radiusMeters: number };
   event: 'enter' | 'exit' | 'nearby';
+  activeWindow?: ActiveWindow;
 };
 
 export type Alarm = {

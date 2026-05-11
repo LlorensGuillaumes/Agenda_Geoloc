@@ -11,8 +11,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@agenda/db": "workspace:*",
-    "@agenda/shared": "workspace:*",
+    "@agenda/db": "*",
+    "@agenda/shared": "*",
     "@libsql/client": "^0.14.0",
     "better-auth": "^1.1.4",
     "cors": "^2.8.5",

@@ -16,6 +16,12 @@ export const timeConfigSchema = z.object({
     .optional(),
 });
 
+export const activeWindowSchema = z.object({
+  start: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),
+  end: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),
+  weekdays: z.array(z.number().int().min(0).max(6)).optional(),
+});
+
 export const locationConfigSchema = z.object({
   mode: z.enum(['saved_place', 'custom_point']),
   placeId: z.string().uuid().optional(),
@@ -27,6 +33,7 @@ export const locationConfigSchema = z.object({
     })
     .optional(),
   event: locationEventSchema,
+  activeWindow: activeWindowSchema.optional(),
 });
 
 // Input al crear una alarma. ownerId NO viene del cliente: por defecto es el

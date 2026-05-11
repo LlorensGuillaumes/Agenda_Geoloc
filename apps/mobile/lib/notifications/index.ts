@@ -1,8 +1,11 @@
+import { Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { TimeConfig } from '../api/client';
 
 const NOTIF_PREFIX = 'alarm-notif:';
+export const ALARM_CATEGORY = 'alarm';
+export const ALARM_CHANNEL_ID = 'alarms';
 
 // Cómo se muestra una notificación cuando llega con la app en foreground.
 Notifications.setNotificationHandler({
@@ -12,6 +15,52 @@ Notifications.setNotificationHandler({
     shouldPlaySound: true,
     shouldSetBadge: false,
   }),
+});
+
+// Canal Android con prioridad MAX, sonido y vibración. En iOS no aplica.
+if (Platform.OS === 'android') {
+  Notifications.setNotificationChannelAsync(ALARM_CHANNEL_ID, {
+    name: 'Alarmas',
+    importance: Notifications.AndroidImportance.MAX,
+    vibrationPattern: [0, 400, 200, 400],
+    sound: 'default',
+    enableVibrate: true,
+    lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
+    bypassDnd: false,
+  }).catch(() => {
+    // ignore: en Expo Go o si los permisos no están dados aún
+  });
+}
+
+// Categoría con botones de posponer 5/10/15 min.
+Notifications.setNotificationCategoryAsync(ALARM_CATEGORY, [
+  { identifier: 'snooze_5', buttonTitle: '+5 min', options: { opensAppToForeground: false } },
+  { identifier: 'snooze_10', buttonTitle: '+10 min', options: { opensAppToForeground: false } },
+  { identifier: 'snooze_15', buttonTitle: '+15 min', options: { opensAppToForeground: false } },
+]).catch(() => {
+  // ignore: en Expo Go puede fallar
+});
+
+// Listener global de respuestas. Funciona aunque la app esté en background.
+Notifications.addNotificationResponseReceivedListener(async (response) => {
+  const actionId = response.actionIdentifier;
+  if (!actionId.startsWith('snooze_')) return;
+  const minutes = actionId === 'snooze_5' ? 5 : actionId === 'snooze_10' ? 10 : 15;
+  const { content } = response.notification.request;
+  await Notifications.scheduleNotificationAsync({
+    content: {
+      title: content.title ?? 'Alarma',
+      body: content.body ?? '',
+      data: { ...(content.data ?? {}), snoozedFromAlarmId: content.data?.alarmId },
+      categoryIdentifier: ALARM_CATEGORY,
+      sound: 'default',
+    },
+    trigger: {
+      type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+      seconds: minutes * 60,
+      channelId: Platform.OS === 'android' ? ALARM_CHANNEL_ID : undefined,
+    } as Notifications.NotificationTriggerInput,
+  });
 });
 
 export async function ensureNotificationPermission(): Promise<boolean> {
@@ -54,6 +103,8 @@ export async function scheduleAlarmNotification(args: {
     title: args.title,
     body: args.body ?? '',
     data: { alarmId: args.alarmId },
+    categoryIdentifier: ALARM_CATEGORY,
+    sound: 'default' as const,
   };
 
   if (timeConfig.repeat === 'once') {
@@ -67,6 +118,7 @@ export async function scheduleAlarmNotification(args: {
       trigger: {
         type: Notifications.SchedulableTriggerInputTypes.DATE,
         date,
+        channelId: Platform.OS === 'android' ? ALARM_CHANNEL_ID : undefined,
       },
     });
     ids.push(id);
@@ -79,6 +131,7 @@ export async function scheduleAlarmNotification(args: {
         type: Notifications.SchedulableTriggerInputTypes.DAILY,
         hour: date.getHours(),
         minute: date.getMinutes(),
+        channelId: Platform.OS === 'android' ? ALARM_CHANNEL_ID : undefined,
       },
     });
     ids.push(id);
@@ -94,6 +147,7 @@ export async function scheduleAlarmNotification(args: {
           weekday: jsDayToExpoWeekday(jsDay),
           hour: date.getHours(),
           minute: date.getMinutes(),
+          channelId: Platform.OS === 'android' ? ALARM_CHANNEL_ID : undefined,
         },
       });
       ids.push(id);

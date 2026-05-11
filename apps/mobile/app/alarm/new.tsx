@@ -16,11 +16,11 @@ import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker, {
   type DateTimePickerEvent,
 } from '@react-native-community/datetimepicker';
-import MapView, { Marker, Circle, type Region } from 'react-native-maps';
 import * as Location from 'expo-location';
 import Slider from '@react-native-community/slider';
 import {
   ApiError,
+  type ActiveWindow,
   type LocationConfig,
   type Place,
   type TimeConfig,
@@ -28,6 +28,7 @@ import {
 import { useCreateAlarm } from '@/lib/alarms/hooks';
 import { usePlaces } from '@/lib/places/hooks';
 import { scheduleAlarmNotification } from '@/lib/notifications';
+import { GeofenceMap, type LatLng } from '@/components/geofence-map';
 
 type TriggerType = 'time' | 'location' | 'time_and_location';
 type LocationMode = 'saved_place' | 'custom_point';
@@ -37,12 +38,7 @@ type RepeatMode = 'once' | 'daily' | 'weekly';
 // Render order: lunes a domingo. Values son JS Date.getDay() (0=Sunday).
 const WEEKDAY_VALUES = [1, 2, 3, 4, 5, 6, 0] as const;
 
-const DEFAULT_REGION: Region = {
-  latitude: 41.3851,
-  longitude: 2.1734,
-  latitudeDelta: 0.05,
-  longitudeDelta: 0.05,
-};
+const DEFAULT_CENTER: LatLng = { latitude: 41.3851, longitude: 2.1734 };
 
 function nextHour(): Date {
   const d = new Date();
@@ -76,6 +72,10 @@ function formatTime(d: Date, lang: string): string {
     hour: '2-digit',
     minute: '2-digit',
   }).format(d);
+}
+
+function hhmm(d: Date): string {
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
 
 // ---------- Sub-components ----------
@@ -204,12 +204,25 @@ export default function NewAlarmScreen() {
   // Location
   const [locationMode, setLocationMode] = useState<LocationMode>('saved_place');
   const [savedPlaceId, setSavedPlaceId] = useState<string | null>(null);
-  const [customMarker, setCustomMarker] = useState({
-    latitude: DEFAULT_REGION.latitude,
-    longitude: DEFAULT_REGION.longitude,
-  });
+  const [customMarker, setCustomMarker] = useState<LatLng>(DEFAULT_CENTER);
   const [customRadius, setCustomRadius] = useState(50);
   const [event, setEvent] = useState<LocationEvent>('enter');
+
+  // Active window (opcional): solo dispara dentro de horario/días
+  const [windowEnabled, setWindowEnabled] = useState(false);
+  const [windowStart, setWindowStart] = useState(() => {
+    const d = new Date();
+    d.setHours(14, 0, 0, 0);
+    return d;
+  });
+  const [windowEnd, setWindowEnd] = useState(() => {
+    const d = new Date();
+    d.setHours(22, 0, 0, 0);
+    return d;
+  });
+  const [windowWeekdays, setWindowWeekdays] = useState<number[]>([]);
+  const [showWindowStartPicker, setShowWindowStartPicker] = useState(false);
+  const [showWindowEndPicker, setShowWindowEndPicker] = useState(false);
 
   const includesTime = triggerType === 'time' || triggerType === 'time_and_location';
   const includesLocation =
@@ -275,6 +288,15 @@ export default function NewAlarmScreen() {
         }
       : undefined;
 
+    const activeWindow: ActiveWindow | undefined =
+      includesLocation && windowEnabled
+        ? {
+            start: hhmm(windowStart),
+            end: hhmm(windowEnd),
+            weekdays: windowWeekdays.length > 0 ? windowWeekdays : undefined,
+          }
+        : undefined;
+
     const locationConfig: LocationConfig | undefined = includesLocation
       ? {
           mode: locationMode,
@@ -288,6 +310,7 @@ export default function NewAlarmScreen() {
                 }
               : undefined,
           event,
+          activeWindow,
         }
       : undefined;
 
@@ -547,31 +570,12 @@ export default function NewAlarmScreen() {
                     style={{ height: 200 }}
                     className="rounded-lg overflow-hidden border border-gray-200"
                   >
-                    <MapView
-                      style={{ flex: 1 }}
-                      region={{
-                        latitude: customMarker.latitude,
-                        longitude: customMarker.longitude,
-                        latitudeDelta: 0.02,
-                        longitudeDelta: 0.02,
-                      }}
-                      onPress={(e) => setCustomMarker(e.nativeEvent.coordinate)}
-                    >
-                      <Marker
-                        coordinate={customMarker}
-                        draggable
-                        onDragEnd={(e) =>
-                          setCustomMarker(e.nativeEvent.coordinate)
-                        }
-                      />
-                      <Circle
-                        center={customMarker}
-                        radius={customRadius}
-                        fillColor="rgba(37, 99, 235, 0.18)"
-                        strokeColor="#2563EB"
-                        strokeWidth={2}
-                      />
-                    </MapView>
+                    <GeofenceMap
+                      center={customMarker}
+                      radius={customRadius}
+                      onPressMap={setCustomMarker}
+                      initialZoom={13}
+                    />
                   </View>
                   <View className="flex-row justify-between mt-3 mb-1">
                     <Text className="text-sm font-medium text-gray-700">
@@ -613,6 +617,118 @@ export default function NewAlarmScreen() {
                   label={t('alarms.eventNearby')}
                   onPress={() => setEvent('nearby')}
                 />
+              </View>
+
+              {/* Active window (solo activa la alarma dentro de un horario) */}
+              <View className="mt-4">
+                <Pressable
+                  onPress={() => setWindowEnabled((v) => !v)}
+                  className="flex-row items-center justify-between px-1 py-2"
+                >
+                  <View className="flex-1 mr-3">
+                    <Text className="text-sm font-medium text-gray-700">
+                      {t('alarms.activeWindowLabel')}
+                    </Text>
+                    <Text className="text-xs text-gray-500 mt-1">
+                      {t('alarms.activeWindowHint')}
+                    </Text>
+                  </View>
+                  <View
+                    className={`w-12 h-7 rounded-full justify-center px-1 ${
+                      windowEnabled ? 'bg-blue-600' : 'bg-gray-300'
+                    }`}
+                  >
+                    <View
+                      className={`w-5 h-5 bg-white rounded-full ${
+                        windowEnabled ? 'self-end' : 'self-start'
+                      }`}
+                    />
+                  </View>
+                </Pressable>
+
+                {windowEnabled && (
+                  <View className="mt-2">
+                    <View className="flex-row">
+                      <Pressable
+                        onPress={() => setShowWindowStartPicker(true)}
+                        className="flex-1 bg-white border border-gray-300 rounded-lg px-4 py-3 mr-2 flex-row items-center"
+                      >
+                        <Ionicons name="time-outline" size={18} color="#374151" />
+                        <Text className="ml-2 text-gray-900">
+                          {t('alarms.from')} {hhmm(windowStart)}
+                        </Text>
+                      </Pressable>
+                      <Pressable
+                        onPress={() => setShowWindowEndPicker(true)}
+                        className="flex-1 bg-white border border-gray-300 rounded-lg px-4 py-3 flex-row items-center"
+                      >
+                        <Ionicons name="time-outline" size={18} color="#374151" />
+                        <Text className="ml-2 text-gray-900">
+                          {t('alarms.to')} {hhmm(windowEnd)}
+                        </Text>
+                      </Pressable>
+                    </View>
+                    {showWindowStartPicker && (
+                      <DateTimePicker
+                        value={windowStart}
+                        mode="time"
+                        display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                        onChange={(_e, sel) => {
+                          setShowWindowStartPicker(Platform.OS === 'ios');
+                          if (sel) setWindowStart(sel);
+                        }}
+                      />
+                    )}
+                    {showWindowEndPicker && (
+                      <DateTimePicker
+                        value={windowEnd}
+                        mode="time"
+                        display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                        onChange={(_e, sel) => {
+                          setShowWindowEndPicker(Platform.OS === 'ios');
+                          if (sel) setWindowEnd(sel);
+                        }}
+                      />
+                    )}
+
+                    <Text className="text-xs text-gray-500 mt-3 mb-2 px-1">
+                      {t('alarms.activeWindowDaysLabel')}
+                    </Text>
+                    <View className="flex-row justify-between">
+                      {WEEKDAY_VALUES.map((day, i) => {
+                        const labels = t('alarms.weekdayInitials', {
+                          returnObjects: true,
+                        }) as string[];
+                        const selected = windowWeekdays.includes(day);
+                        return (
+                          <Pressable
+                            key={day}
+                            onPress={() =>
+                              setWindowWeekdays((prev) =>
+                                prev.includes(day)
+                                  ? prev.filter((d) => d !== day)
+                                  : [...prev, day],
+                              )
+                            }
+                            className={`w-10 h-10 rounded-full items-center justify-center ${
+                              selected
+                                ? 'bg-blue-600'
+                                : 'bg-white border border-gray-300'
+                            }`}
+                          >
+                            <Text
+                              className={
+                                selected ? 'text-white font-medium' : 'text-gray-700'
+                              }
+                            >
+                              {labels[i]}
+                            </Text>
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+                  </View>
+                )}
               </View>
             </Section>
           )}
