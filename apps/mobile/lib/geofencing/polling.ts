@@ -1,17 +1,21 @@
 /**
- * Polling de confirmación tipo Wikiloc.
+ * Servicio de location en background.
  *
- * Cuando el geofence amplio (≥100m, requerido por Google Play Services para
- * fiabilidad) detecta ENTER, arrancamos un polling de location cada 30s para
- * confirmar que el usuario realmente está dentro del radio interno (la zona
- * "casa = casa"). Eso permite tener un radio externo fiable + precisión real
- * a coste de batería SOLO cuando estamos cerca.
+ * Dos roles unificados en un único `Location.startLocationUpdatesAsync`:
+ *
+ * 1. **Keepalive** (anti-MIUI): mientras haya al menos una alarma location
+ *    activa, el task corre como foreground service con notificación
+ *    persistente. Esto evita que MIUI/Xiaomi mate el proceso de la app y
+ *    GMS pueda despertar el handler de geofencing cuando hay un cruce real.
+ *
+ * 2. **Polling de confirmación** (Wikiloc-style): cuando dispara ENTER del
+ *    geofence externo, añadimos una entrada `polling:{alarmId}`. En cada
+ *    location update, si hay entradas pendientes, comprobamos distancia al
+ *    centro y notificamos cuando entran al radio interno.
  *
  * Estado:
- * - `polling:{alarmId}` en AsyncStorage con info del polling activo
- * - El task de location updates corre mientras haya al menos un polling activo
- * - Cada entrada tiene un timeout (5 min) para no quedar polling indefinido si
- *   el usuario pasa cerca pero nunca entra al radio interno
+ * - `polling:{alarmId}` - entrada de polling pendiente de confirmar
+ * - `keepalive:active` - lista de alarmIds que mantienen vivo el service
  */
 import { Platform } from 'react-native';
 import * as TaskManager from 'expo-task-manager';
@@ -22,9 +26,10 @@ import { ALARM_CATEGORY, ALARM_CHANNEL_ID } from '../notifications';
 
 export const POLLING_TASK = 'agenda.location-polling-task';
 const POLLING_PREFIX = 'polling:';
+const KEEPALIVE_KEY = 'keepalive:active';
 
 const CONFIRM_TIMEOUT_MS = 5 * 60 * 1000;
-const POLLING_INTERVAL_MS = 30 * 1000;
+const LOCATION_INTERVAL_MS = 30 * 1000;
 
 type LatLng = { latitude: number; longitude: number };
 
@@ -53,7 +58,7 @@ function distanceMeters(a: LatLng, b: LatLng): number {
   return R * c;
 }
 
-async function readEntries(): Promise<PollingEntry[]> {
+async function readPollingEntries(): Promise<PollingEntry[]> {
   const keys = await AsyncStorage.getAllKeys();
   const pollingKeys = keys.filter((k) => k.startsWith(POLLING_PREFIX));
   if (pollingKeys.length === 0) return [];
@@ -64,43 +69,93 @@ async function readEntries(): Promise<PollingEntry[]> {
     try {
       entries.push(JSON.parse(raw) as PollingEntry);
     } catch {
-      // skip corrupt
+      // skip
     }
   }
   return entries;
 }
 
-async function removeEntry(alarmId: string): Promise<void> {
+async function removePollingEntry(alarmId: string): Promise<void> {
   await AsyncStorage.removeItem(`${POLLING_PREFIX}${alarmId}`);
 }
 
-async function ensureLocationTaskRunning(): Promise<void> {
+async function readKeepaliveIds(): Promise<string[]> {
+  try {
+    const raw = await AsyncStorage.getItem(KEEPALIVE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? (parsed as string[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+async function writeKeepaliveIds(ids: string[]): Promise<void> {
+  if (ids.length === 0) {
+    await AsyncStorage.removeItem(KEEPALIVE_KEY);
+  } else {
+    await AsyncStorage.setItem(KEEPALIVE_KEY, JSON.stringify(ids));
+  }
+}
+
+async function startLocationTask(notificationBody: string): Promise<void> {
   const running = await Location.hasStartedLocationUpdatesAsync(POLLING_TASK);
   if (running) return;
   await Location.startLocationUpdatesAsync(POLLING_TASK, {
     accuracy: Location.Accuracy.Balanced,
-    timeInterval: POLLING_INTERVAL_MS,
+    timeInterval: LOCATION_INTERVAL_MS,
     distanceInterval: 0,
     showsBackgroundLocationIndicator: false,
     pausesUpdatesAutomatically: false,
     foregroundService: {
       notificationTitle: 'Agenda',
-      notificationBody: 'Confirmando ubicación cercana a un lugar guardado',
+      notificationBody,
       notificationColor: '#2563EB',
     },
   });
 }
 
-async function stopLocationTaskIfIdle(): Promise<void> {
-  const entries = await readEntries();
-  if (entries.length > 0) return;
+async function stopLocationTask(): Promise<void> {
   const running = await Location.hasStartedLocationUpdatesAsync(POLLING_TASK);
   if (running) await Location.stopLocationUpdatesAsync(POLLING_TASK);
 }
 
 /**
- * Arranca el polling de confirmación para una alarma. Se llama desde el handler
- * del geofence cuando dispara ENTER en el radio externo.
+ * Reconcilia el estado del location task con el estado deseado.
+ * - Si hay keepalive O polling: arranca (si no estaba).
+ * - Si no hay nada: para (si estaba).
+ *
+ * Cambiar el texto de la notificación del foreground service requiere
+ * stop+start, por eso preferimos un texto único informativo.
+ */
+async function reconcileLocationTask(): Promise<void> {
+  const keepaliveIds = await readKeepaliveIds();
+  const pollingEntries = await readPollingEntries();
+  const shouldRun = keepaliveIds.length > 0 || pollingEntries.length > 0;
+  if (shouldRun) {
+    const placesCount = keepaliveIds.length;
+    const body =
+      placesCount > 0
+        ? `Vigilando ${placesCount} ${placesCount === 1 ? 'lugar' : 'lugares'} para alarmas`
+        : 'Confirmando ubicación cercana a un lugar guardado';
+    await startLocationTask(body);
+  } else {
+    await stopLocationTask();
+  }
+}
+
+/**
+ * Marca la lista de alarmas que deben mantener el service vivo. Se llama desde
+ * `syncGeofences` con la lista de IDs de alarmas location activas.
+ */
+export async function setKeepaliveAlarms(alarmIds: string[]): Promise<void> {
+  await writeKeepaliveIds(alarmIds);
+  await reconcileLocationTask();
+}
+
+/**
+ * Añade un polling de confirmación para una alarma. Idempotente: si ya hay
+ * uno activo para la misma alarma, lo sobreescribe.
  */
 export async function startConfirmation(
   entry: Omit<PollingEntry, 'startedAt'>,
@@ -110,28 +165,27 @@ export async function startConfirmation(
     `${POLLING_PREFIX}${entry.alarmId}`,
     JSON.stringify(full),
   );
-  await ensureLocationTaskRunning();
+  await reconcileLocationTask();
 }
 
 /**
- * Cancela el polling para una alarma (p. ej. usuario salió del radio externo
- * antes de confirmarse el enter). Idempotente.
+ * Cancela el polling de confirmación. Idempotente. Si no queda nada activo,
+ * para el service.
  */
 export async function cancelConfirmation(alarmId: string): Promise<void> {
-  await removeEntry(alarmId);
-  await stopLocationTaskIfIdle();
+  await removePollingEntry(alarmId);
+  await reconcileLocationTask();
 }
 
 /**
- * Limpia todos los pollings y para el task. Llamar al hacer logout o al
- * desregistrar todas las alarmas.
+ * Limpia todo (polling + keepalive) y para el service. Llamar al logout.
  */
 export async function clearAllPolling(): Promise<void> {
   const keys = await AsyncStorage.getAllKeys();
   const pollingKeys = keys.filter((k) => k.startsWith(POLLING_PREFIX));
   if (pollingKeys.length > 0) await AsyncStorage.multiRemove(pollingKeys);
-  const running = await Location.hasStartedLocationUpdatesAsync(POLLING_TASK);
-  if (running) await Location.stopLocationUpdatesAsync(POLLING_TASK);
+  await AsyncStorage.removeItem(KEEPALIVE_KEY);
+  await stopLocationTask();
 }
 
 type LocationTaskData = { locations: Location.LocationObject[] };
@@ -139,24 +193,19 @@ type LocationTaskData = { locations: Location.LocationObject[] };
 TaskManager.defineTask<LocationTaskData>(POLLING_TASK, async ({ data, error }) => {
   if (error) return;
   if (!data?.locations || data.locations.length === 0) return;
-  // Usamos solo la última lectura. Las anteriores pueden estar muy desfasadas.
   const last = data.locations[data.locations.length - 1];
   const cur: LatLng = {
     latitude: last.coords.latitude,
     longitude: last.coords.longitude,
   };
 
-  const entries = await readEntries();
-  if (entries.length === 0) {
-    await stopLocationTaskIfIdle();
-    return;
-  }
-
+  // Procesar pollings de confirmación pendientes
+  const entries = await readPollingEntries();
   const now = Date.now();
   for (const entry of entries) {
     const expired = now - entry.startedAt > CONFIRM_TIMEOUT_MS;
     if (expired) {
-      await removeEntry(entry.alarmId);
+      await removePollingEntry(entry.alarmId);
       continue;
     }
     const dist = distanceMeters(cur, {
@@ -168,15 +217,28 @@ TaskManager.defineTask<LocationTaskData>(POLLING_TASK, async ({ data, error }) =
         content: {
           title: entry.title,
           body: entry.notes ?? '',
-          data: { alarmId: entry.alarmId, eventType: 'enter', confirmed: true },
+          data: {
+            alarmId: entry.alarmId,
+            eventType: 'enter',
+            confirmed: true,
+          },
           categoryIdentifier: ALARM_CATEGORY,
           sound: 'default',
         },
         trigger: Platform.OS === 'android' ? { channelId: ALARM_CHANNEL_ID } : null,
       });
-      await removeEntry(entry.alarmId);
+      await removePollingEntry(entry.alarmId);
+      // Notificar al sistema de "fire-and-deactivate". El import dinámico
+      // evita ciclo de imports entre polling.ts y index.ts.
+      try {
+        const mod = await import('./fired');
+        await mod.markAlarmFiredIfOnce(entry.alarmId);
+      } catch {
+        // ignore
+      }
     }
   }
 
-  await stopLocationTaskIfIdle();
+  // No paramos el task aquí: el reconcile lo decide. Si hay keepalive activo
+  // por alarmas registradas, debemos seguir corriendo.
 });
