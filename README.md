@@ -157,9 +157,49 @@ Y reconstruye la APK (`cd apps/mobile && npx expo run:android`) para que los ami
 
 ### Mobile
 
-- **Fase 3 (actual)**: Expo Go — escanea QR de Metro
-- **Fase 4 en adelante**: dev build local con `cd apps/mobile && npx expo run:android` (necesita Android Studio + SDK + USB debugging)
-- **Producción**: EAS Build → Play Store / App Store
+- **Desarrollo iterativo**: Expo Go en LAN (`pnpm dev:mobile`) o development build local (`cd apps/mobile && npx expo run:android`, requiere Android Studio + USB).
+- **Distribución a amigos/testers**: **EAS Build perfil `preview`** — genera un APK descargable por URL desde el cloud (sin USB).
+- **Producción Play Store**: EAS Build perfil `production` → genera `.aab` para subir a Google Play.
+
+#### Setup inicial EAS (una vez)
+
+```sh
+cd apps/mobile
+npm install -g eas-cli         # si no lo tienes
+eas login                       # cuenta de expo.dev
+eas init                        # vincula el proyecto, escribe extra.eas.projectId en app.json
+eas update:configure            # escribe updates.url en app.json y crea canales preview/production
+```
+
+Estos comandos modifican `app.json`. Tras ejecutarlos, commitea los cambios.
+
+#### Generar APK preview (sin USB, distribuible a testers)
+
+```sh
+cd apps/mobile
+eas build --platform android --profile preview
+```
+
+EAS construye en el cloud (10-15 min), te da una URL con QR. Los testers la abren en el móvil, descargan el APK e instalan (Android pedirá permitir "fuentes desconocidas" la primera vez).
+
+La URL `EXPO_PUBLIC_API_URL` ya queda incrustada en el bundle según `eas.json` (apunta a Render por defecto en los perfiles `preview` y `production`).
+
+#### Push de updates JS sin rebuild
+
+Para cambios que solo tocan JS/JSX/TS (no nativos, no app.json, no plugins):
+
+```sh
+cd apps/mobile
+eas update --channel preview --message "Descripción del cambio"
+```
+
+Los móviles con el APK `preview` ya instalado descargan el cambio al siguiente arranque. Funciona porque `runtimeVersion: { policy: "appVersion" }` en [app.json](apps/mobile/app.json) liga las updates a la versión nativa: solo cambias módulos nativos o `expo.version` y los APKs antiguos dejan de recibir updates (lo que es correcto — necesitan un APK nuevo).
+
+#### Cuándo SÍ hay que regenerar APK
+
+- Cambios en dependencias nativas (instalas un paquete con código nativo)
+- Cambios en `app.json` que afecten al manifest nativo (permissions, plugins, package, version)
+- Subes la versión `expo.version` en `app.json` para una release con cambios visibles
 
 ## Gotchas conocidos
 

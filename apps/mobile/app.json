@@ -8,6 +8,9 @@
     "scheme": "agenda",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
     "ios": {
       "supportsTablet": true
     },
@@ -33,7 +36,7 @@
         "android.permission.FOREGROUND_SERVICE",
         "android.permission.FOREGROUND_SERVICE_LOCATION"
       ],
-      "package": "com.anonymous.agenda"
+      "package": "dev.llorensguillaumes.agenda"
     },
     "web": {
       "output": "static",
@@ -74,6 +77,16 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "6a1e386e-1ed5-4872-a225-ca4344c174a5"
+      }
+    },
+    "owner": "llorensguillaumes",
+    "updates": {
+      "url": "https://u.expo.dev/6a1e386e-1ed5-4872-a225-ca4344c174a5"
     }
   }
 }
