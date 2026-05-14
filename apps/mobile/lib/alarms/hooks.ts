@@ -52,3 +52,29 @@ export function useDeleteAlarm() {
     },
   });
 }
+
+export function useAcceptAlarm() {
+  const token = useAuthStore((s) => s.token);
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.alarms.accept(token!, id),
+    onSuccess: (accepted) => {
+      qc.setQueryData<Alarm[]>(ALARMS_KEY, (prev) =>
+        (prev ?? []).map((a) => (a.id === accepted.id ? accepted : a)),
+      );
+    },
+  });
+}
+
+export function useRejectAlarm() {
+  const token = useAuthStore((s) => s.token);
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.alarms.reject(token!, id),
+    onSuccess: (_, id) => {
+      qc.setQueryData<Alarm[]>(ALARMS_KEY, (prev) =>
+        (prev ?? []).filter((a) => a.id !== id),
+      );
+    },
+  });
+}

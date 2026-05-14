@@ -114,6 +114,7 @@ export type LocationConfig = {
   placeId?: string;
   customPoint?: { latitude: number; longitude: number; radiusMeters: number };
   event: 'enter' | 'exit' | 'nearby';
+  repeat?: 'once' | 'always';
   activeWindow?: ActiveWindow;
 };
 
@@ -149,7 +150,46 @@ export type CreateAlarmInput = {
   triggerType: Alarm['triggerType'];
   timeConfig?: TimeConfig;
   locationConfig?: LocationConfig;
+  ownerId?: string;
 };
+
+export type PublicUser = {
+  id: string;
+  name: string;
+  email: string;
+  image: string | null;
+};
+
+export type TrustLevel = 'manual_accept' | 'auto_accept';
+
+export type Friendship = {
+  id: string;
+  status: 'accepted';
+  trustLevel: TrustLevel;
+  createdAt: string;
+  acceptedAt: string | null;
+  friend: PublicUser | null;
+};
+
+export type FriendRequest = {
+  id: string;
+  requesterId: string;
+  addresseeId: string;
+  status: 'pending';
+  trustLevel: TrustLevel;
+  createdAt: string;
+  requester: PublicUser;
+  addressee: PublicUser | null;
+  direction: 'incoming' | 'outgoing';
+};
+
+export type PlaceShare = {
+  id: string;
+  createdAt: string;
+  sharedWith: PublicUser;
+};
+
+export type SharedPlace = Place & { owner: PublicUser | null };
 
 export const api = {
   baseUrl: API_URL,
@@ -202,5 +242,65 @@ export const api = {
     ) => request<Alarm>(`/api/alarms/${id}`, { method: 'PATCH', token, body: data }),
     remove: (token: string, id: string) =>
       request<null>(`/api/alarms/${id}`, { method: 'DELETE', token }),
+    accept: (token: string, id: string) =>
+      request<Alarm>(`/api/alarms/${id}/accept`, { method: 'POST', token, body: {} }),
+    reject: (token: string, id: string) =>
+      request<null>(`/api/alarms/${id}/reject`, { method: 'POST', token, body: {} }),
+  },
+
+  friends: {
+    list: (token: string) => request<Friendship[]>('/api/friends', { token }),
+    requests: (token: string) =>
+      request<FriendRequest[]>('/api/friends/requests', { token }),
+    search: (token: string, email: string) =>
+      request<PublicUser>('/api/friends/search', {
+        method: 'POST',
+        token,
+        body: { email },
+      }),
+    sendRequest: (token: string, addresseeId: string) =>
+      request<FriendRequest>('/api/friends/requests', {
+        method: 'POST',
+        token,
+        body: { addresseeId },
+      }),
+    accept: (token: string, friendshipId: string) =>
+      request<Friendship>(`/api/friends/requests/${friendshipId}/accept`, {
+        method: 'POST',
+        token,
+        body: {},
+      }),
+    // Sirve tanto para rechazar una pendiente como para cancelar la mía outgoing.
+    rejectRequest: (token: string, friendshipId: string) =>
+      request<null>(`/api/friends/requests/${friendshipId}`, {
+        method: 'DELETE',
+        token,
+      }),
+    remove: (token: string, friendshipId: string) =>
+      request<null>(`/api/friends/${friendshipId}`, { method: 'DELETE', token }),
+    setTrustLevel: (token: string, friendshipId: string, trustLevel: TrustLevel) =>
+      request<Friendship>(`/api/friends/${friendshipId}`, {
+        method: 'PATCH',
+        token,
+        body: { trustLevel },
+      }),
+  },
+
+  placeShares: {
+    sharedWithMe: (token: string) =>
+      request<SharedPlace[]>('/api/places/shared-with-me', { token }),
+    list: (token: string, placeId: string) =>
+      request<PlaceShare[]>(`/api/places/${placeId}/shares`, { token }),
+    create: (token: string, placeId: string, userId: string) =>
+      request<PlaceShare>(`/api/places/${placeId}/shares`, {
+        method: 'POST',
+        token,
+        body: { userId },
+      }),
+    remove: (token: string, placeId: string, userId: string) =>
+      request<null>(`/api/places/${placeId}/shares/${userId}`, {
+        method: 'DELETE',
+        token,
+      }),
   },
 };

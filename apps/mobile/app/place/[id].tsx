@@ -19,10 +19,130 @@ import Slider from '@react-native-community/slider';
 import { ApiError } from '@/lib/api/client';
 import {
   usePlaces,
+  usePlaceShares,
+  useSharePlace,
+  useUnsharePlace,
   useUpdatePlace,
   useDeletePlace,
 } from '@/lib/places/hooks';
+import { useFriends } from '@/lib/friends/hooks';
 import { GeofenceMap, type LatLng } from '@/components/geofence-map';
+
+function Avatar({
+  user,
+  size = 32,
+}: {
+  user: { name: string };
+  size?: number;
+}) {
+  const initials = user.name
+    .split(' ')
+    .map((p) => p[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
+  return (
+    <View
+      style={{ width: size, height: size }}
+      className="rounded-full bg-blue-100 items-center justify-center"
+    >
+      <Text className="text-blue-700 text-xs font-semibold">{initials}</Text>
+    </View>
+  );
+}
+
+function SharingSection({ placeId }: { placeId: string }) {
+  const { t } = useTranslation();
+  const shares = usePlaceShares(placeId);
+  const friends = useFriends();
+  const share = useSharePlace(placeId);
+  const unshare = useUnsharePlace(placeId);
+  const [picking, setPicking] = useState(false);
+
+  const sharedIds = new Set((shares.data ?? []).map((s) => s.sharedWith.id));
+  const candidates = (friends.data ?? []).filter(
+    (f) => f.friend && !sharedIds.has(f.friend.id),
+  );
+
+  return (
+    <View className="mt-2 mb-6">
+      <Text className="text-sm font-medium text-gray-700 mb-2">
+        {t('places.sharedWith')}
+      </Text>
+      <Text className="text-xs text-gray-500 mb-2">
+        {t('places.sharedWithHint')}
+      </Text>
+
+      {shares.isLoading ? (
+        <ActivityIndicator color="#2563EB" />
+      ) : (shares.data ?? []).length === 0 ? (
+        <Text className="text-xs text-gray-400 italic mb-2">
+          {t('places.shareEmpty')}
+        </Text>
+      ) : (
+        (shares.data ?? []).map((s) => (
+          <View
+            key={s.id}
+            className="flex-row items-center bg-gray-50 rounded-lg p-2 mb-2"
+          >
+            <Avatar user={s.sharedWith} />
+            <View className="flex-1 mx-3">
+              <Text className="text-sm text-gray-900">{s.sharedWith.name}</Text>
+              <Text className="text-xs text-gray-500">{s.sharedWith.email}</Text>
+            </View>
+            <Pressable onPress={() => unshare.mutate(s.sharedWith.id)} className="p-2">
+              <Ionicons name="close-circle" size={20} color="#9CA3AF" />
+            </Pressable>
+          </View>
+        ))
+      )}
+
+      {picking ? (
+        <View className="border border-gray-200 rounded-lg p-2 mb-2">
+          {candidates.length === 0 ? (
+            <Text className="text-xs text-gray-500 italic p-3 text-center">
+              {t('places.noFriendsAvailable')}
+            </Text>
+          ) : (
+            candidates.map((f) => (
+              <Pressable
+                key={f.id}
+                onPress={() => {
+                  if (!f.friend) return;
+                  share.mutate(f.friend.id);
+                  setPicking(false);
+                }}
+                className="flex-row items-center p-2 active:bg-gray-100 rounded"
+              >
+                <Avatar user={f.friend!} />
+                <View className="flex-1 ml-3">
+                  <Text className="text-sm text-gray-900">{f.friend!.name}</Text>
+                  <Text className="text-xs text-gray-500">{f.friend!.email}</Text>
+                </View>
+              </Pressable>
+            ))
+          )}
+          <Pressable
+            onPress={() => setPicking(false)}
+            className="mt-1 p-2 items-center"
+          >
+            <Text className="text-sm text-gray-500">{t('common.cancel')}</Text>
+          </Pressable>
+        </View>
+      ) : (
+        <Pressable
+          onPress={() => setPicking(true)}
+          className="flex-row items-center justify-center border border-blue-300 rounded-lg p-2 active:bg-blue-50"
+        >
+          <Ionicons name="person-add-outline" size={18} color="#2563EB" />
+          <Text className="text-blue-600 font-medium ml-2">
+            {t('places.shareWithFriend')}
+          </Text>
+        </Pressable>
+      )}
+    </View>
+  );
+}
 
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'];
 
@@ -225,6 +345,8 @@ export default function PlaceDetailScreen() {
               </Pressable>
             ))}
           </View>
+
+          <SharingSection placeId={place.id} />
 
           <Pressable
             onPress={handleSave}

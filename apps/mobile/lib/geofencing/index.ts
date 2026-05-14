@@ -7,8 +7,15 @@ import type { Alarm, Place } from '../api/client';
 import {
   cancelConfirmation,
   clearAllPolling,
+  setKeepaliveAlarms,
   startConfirmation,
 } from './polling';
+import {
+  clearAllFiredFlags,
+  isAlarmFired,
+  markAlarmFired,
+  reconcileFiredFlags,
+} from './fired';
 import { ALARM_CATEGORY, ALARM_CHANNEL_ID } from '../notifications';
 
 export const GEOFENCE_TASK = 'agenda.geofence-task';
@@ -30,6 +37,7 @@ type CachedAlarmInfo = {
   centerLat: number;
   centerLng: number;
   outerRadius: number;
+  repeat?: 'once' | 'always'; // default 'once'
   activeWindow?: {
     start: string; // "HH:MM"
     end: string; // "HH:MM"
@@ -82,6 +90,9 @@ TaskManager.defineTask<GeofenceTaskData>(GEOFENCE_TASK, async ({ data, error }) 
   if (!region?.identifier) return;
 
   const isEnter = eventType === Location.GeofencingEventType.Enter;
+
+  // Si la alarma ya disparó (repeat='once'), ignorar.
+  if (await isAlarmFired(region.identifier)) return;
 
   let info: CachedAlarmInfo | null = null;
   try {
@@ -142,6 +153,10 @@ TaskManager.defineTask<GeofenceTaskData>(GEOFENCE_TASK, async ({ data, error }) 
     },
     trigger: Platform.OS === 'android' ? { channelId: ALARM_CHANNEL_ID } : null,
   });
+  // Para EXIT directo: marcar como fired si es de un solo uso.
+  if (!isEnter) {
+    await markAlarmFired(region.identifier, info?.repeat);
+  }
 });
 
 export type SyncResult = {
@@ -162,6 +177,11 @@ export async function syncGeofences(input: {
 
   for (const alarm of alarms) {
     if (!alarm.isActive) {
+      skipped++;
+      continue;
+    }
+    // pending_acceptance: el owner aún no ha aceptado, no registramos.
+    if (alarm.status !== 'active') {
       skipped++;
       continue;
     }
@@ -218,6 +238,7 @@ export async function syncGeofences(input: {
         centerLat: latitude,
         centerLng: longitude,
         outerRadius: radius,
+        repeat: cfg.repeat,
         activeWindow: cfg.activeWindow,
       },
     });
@@ -262,6 +283,20 @@ export async function syncGeofences(input: {
     );
   }
 
+  // Mantener el location service vivo mientras haya alarmas activas.
+  // Esto crea una notificación persistente "Vigilando N lugares" en Android
+  // y evita que MIUI/Xiaomi mate el proceso, garantizando que GMS pueda
+  // despertar el handler del geofence cuando hay cruces reales.
+  const activeIds = limited
+    .map((c) => c.region.identifier)
+    .filter((id): id is string => typeof id === 'string');
+  await setKeepaliveAlarms(activeIds);
+
+  // Reconcilia los flags `fired` locales: limpia los de alarmas que ya no
+  // están activas y reintenta el patch para las que sí siguen activas pero
+  // tienen flag fired (probable fallo previo de red).
+  await reconcileFiredFlags(new Set(activeIds));
+
   return {
     registered: limited.length,
     skipped,
@@ -289,6 +324,11 @@ export async function unregisterAllGeofences(): Promise<void> {
   }
   try {
     await clearAllPolling();
+  } catch {
+    // ignore
+  }
+  try {
+    await clearAllFiredFlags();
   } catch {
     // ignore
   }

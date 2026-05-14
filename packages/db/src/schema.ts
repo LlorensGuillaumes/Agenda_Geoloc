@@ -166,6 +166,7 @@ export type LocationConfig = {
     radiusMeters: number;
   };
   event: 'enter' | 'exit' | 'nearby';
+  repeat?: 'once' | 'always'; // default 'once': se desactiva tras disparar
   activeWindow?: {
     start: string; // "HH:MM"
     end: string; // "HH:MM"

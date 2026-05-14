@@ -26,7 +26,8 @@ import {
   type TimeConfig,
 } from '@/lib/api/client';
 import { useCreateAlarm } from '@/lib/alarms/hooks';
-import { usePlaces } from '@/lib/places/hooks';
+import { usePlaces, useSharedWithMePlaces } from '@/lib/places/hooks';
+import { useFriends } from '@/lib/friends/hooks';
 import { scheduleAlarmNotification } from '@/lib/notifications';
 import { GeofenceMap, type LatLng } from '@/components/geofence-map';
 
@@ -187,12 +188,20 @@ export default function NewAlarmScreen() {
   const { t, i18n } = useTranslation();
   const createAlarm = useCreateAlarm();
   const placesQuery = usePlaces();
+  const friendsQuery = useFriends();
+  const sharedPlacesQuery = useSharedWithMePlaces();
 
   // Generic
   const [title, setTitle] = useState('');
   const [notes, setNotes] = useState('');
   const [triggerType, setTriggerType] = useState<TriggerType | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  // Para qué amigo (null = mi propia agenda). Cuando se elige un amigo, los
+  // lugares disponibles son los que ese amigo me ha compartido y las
+  // notificaciones locales NO se programan (las gestiona el device del owner).
+  const [ownerId, setOwnerId] = useState<string | null>(null);
+  const isCrossAgenda = ownerId !== null;
 
   // Time
   const [date, setDate] = useState(nextHour());
@@ -207,6 +216,8 @@ export default function NewAlarmScreen() {
   const [customMarker, setCustomMarker] = useState<LatLng>(DEFAULT_CENTER);
   const [customRadius, setCustomRadius] = useState(50);
   const [event, setEvent] = useState<LocationEvent>('enter');
+  // Por defecto la alarma de lugar es de un solo uso (se desactiva al disparar).
+  const [locationRepeat, setLocationRepeat] = useState<'once' | 'always'>('once');
 
   // Active window (opcional): solo dispara dentro de horario/días
   const [windowEnabled, setWindowEnabled] = useState(false);
@@ -227,6 +238,19 @@ export default function NewAlarmScreen() {
   const includesTime = triggerType === 'time' || triggerType === 'time_and_location';
   const includesLocation =
     triggerType === 'location' || triggerType === 'time_and_location';
+
+  // Lugares que se ofrecen en el selector según el owner elegido.
+  const visiblePlaces: Place[] = isCrossAgenda
+    ? (sharedPlacesQuery.data ?? []).filter((p) => p.ownerId === ownerId)
+    : (placesQuery.data ?? []);
+  const visiblePlacesLoading = isCrossAgenda
+    ? sharedPlacesQuery.isLoading
+    : placesQuery.isLoading;
+
+  const friends = friendsQuery.data ?? [];
+  const selectedFriendName = isCrossAgenda
+    ? friends.find((f) => f.friend?.id === ownerId)?.friend?.name
+    : undefined;
 
   // Center custom map on user location when first switching to it
   useEffect(() => {
@@ -310,6 +334,7 @@ export default function NewAlarmScreen() {
                 }
               : undefined,
           event,
+          repeat: locationRepeat,
           activeWindow,
         }
       : undefined;
@@ -322,9 +347,12 @@ export default function NewAlarmScreen() {
         triggerType,
         timeConfig,
         locationConfig,
+        ownerId: ownerId ?? undefined,
       });
 
-      if (includesTime && timeConfig) {
+      // Solo programamos la notificación local cuando la alarma es para
+      // nosotros. Si es para un amigo, la gestionará el device del owner.
+      if (!isCrossAgenda && includesTime && timeConfig) {
         await scheduleAlarmNotification({
           alarmId: created.id,
           title: created.title,
@@ -379,6 +407,78 @@ export default function NewAlarmScreen() {
               style={{ minHeight: 70, textAlignVertical: 'top' }}
             />
           </Section>
+
+          {/* For whom (cross-agenda) — solo si tienes amigos */}
+          {friends.length > 0 && (
+            <Section title={t('alarms.forWhomSection')}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ paddingVertical: 4 }}
+              >
+                <Pressable
+                  onPress={() => {
+                    setOwnerId(null);
+                    setSavedPlaceId(null);
+                  }}
+                  className={`flex-row items-center px-3 py-2 rounded-full mr-2 border ${
+                    !isCrossAgenda
+                      ? 'bg-blue-600 border-blue-600'
+                      : 'bg-white border-gray-300'
+                  }`}
+                >
+                  <Ionicons
+                    name="person"
+                    size={14}
+                    color={!isCrossAgenda ? '#fff' : '#374151'}
+                  />
+                  <Text
+                    className={`ml-2 ${
+                      !isCrossAgenda ? 'text-white font-medium' : 'text-gray-700'
+                    }`}
+                  >
+                    {t('alarms.forMyself')}
+                  </Text>
+                </Pressable>
+                {friends.map((f) =>
+                  f.friend ? (
+                    <Pressable
+                      key={f.id}
+                      onPress={() => {
+                        setOwnerId(f.friend!.id);
+                        setSavedPlaceId(null);
+                      }}
+                      className={`flex-row items-center px-3 py-2 rounded-full mr-2 border ${
+                        ownerId === f.friend.id
+                          ? 'bg-blue-600 border-blue-600'
+                          : 'bg-white border-gray-300'
+                      }`}
+                    >
+                      <Ionicons
+                        name="person-outline"
+                        size={14}
+                        color={ownerId === f.friend.id ? '#fff' : '#374151'}
+                      />
+                      <Text
+                        className={`ml-2 ${
+                          ownerId === f.friend.id
+                            ? 'text-white font-medium'
+                            : 'text-gray-700'
+                        }`}
+                      >
+                        {f.friend.name}
+                      </Text>
+                    </Pressable>
+                  ) : null,
+                )}
+              </ScrollView>
+              {isCrossAgenda && (
+                <Text className="text-xs text-gray-500 mt-2 px-1">
+                  {t('alarms.crossAgendaHint', { name: selectedFriendName ?? '' })}
+                </Text>
+              )}
+            </Section>
+          )}
 
           {/* Trigger type */}
           <Section title={t('alarms.triggerSection')}>
@@ -530,23 +630,27 @@ export default function NewAlarmScreen() {
               </View>
 
               {locationMode === 'saved_place' ? (
-                placesQuery.isLoading ? (
+                visiblePlacesLoading ? (
                   <Text className="text-gray-500 text-center py-4">
                     {t('common.loading')}
                   </Text>
-                ) : (placesQuery.data?.length ?? 0) === 0 ? (
+                ) : visiblePlaces.length === 0 ? (
                   <View className="bg-white border border-gray-200 rounded-lg p-4 items-center">
                     <Text className="text-gray-500 text-center mb-2">
-                      {t('alarms.noPlacesYet')}
+                      {isCrossAgenda
+                        ? t('alarms.noSharedPlacesFromFriend')
+                        : t('alarms.noPlacesYet')}
                     </Text>
-                    <Pressable
-                      onPress={() => router.push('/place/new' as never)}
-                      className="px-3 py-2 border border-blue-300 rounded-lg active:bg-blue-50"
-                    >
-                      <Text className="text-blue-600">
-                        {t('alarms.createFirstPlace')}
-                      </Text>
-                    </Pressable>
+                    {!isCrossAgenda && (
+                      <Pressable
+                        onPress={() => router.push('/place/new' as never)}
+                        className="px-3 py-2 border border-blue-300 rounded-lg active:bg-blue-50"
+                      >
+                        <Text className="text-blue-600">
+                          {t('alarms.createFirstPlace')}
+                        </Text>
+                      </Pressable>
+                    )}
                   </View>
                 ) : (
                   <ScrollView
@@ -554,7 +658,7 @@ export default function NewAlarmScreen() {
                     showsHorizontalScrollIndicator={false}
                     contentContainerStyle={{ paddingVertical: 4 }}
                   >
-                    {placesQuery.data!.map((p) => (
+                    {visiblePlaces.map((p) => (
                       <PlaceChip
                         key={p.id}
                         place={p}
@@ -617,6 +721,36 @@ export default function NewAlarmScreen() {
                   label={t('alarms.eventNearby')}
                   onPress={() => setEvent('nearby')}
                 />
+              </View>
+
+              {/* Repetir (por defecto se desactiva tras disparar) */}
+              <View className="mt-4">
+                <Pressable
+                  onPress={() =>
+                    setLocationRepeat((v) => (v === 'always' ? 'once' : 'always'))
+                  }
+                  className="flex-row items-center justify-between px-1 py-2"
+                >
+                  <View className="flex-1 mr-3">
+                    <Text className="text-sm font-medium text-gray-700">
+                      {t('alarms.repeatAlwaysLabel')}
+                    </Text>
+                    <Text className="text-xs text-gray-500 mt-1">
+                      {t('alarms.repeatAlwaysHint')}
+                    </Text>
+                  </View>
+                  <View
+                    className={`w-12 h-7 rounded-full justify-center px-1 ${
+                      locationRepeat === 'always' ? 'bg-blue-600' : 'bg-gray-300'
+                    }`}
+                  >
+                    <View
+                      className={`w-5 h-5 bg-white rounded-full ${
+                        locationRepeat === 'always' ? 'self-end' : 'self-start'
+                      }`}
+                    />
+                  </View>
+                </Pressable>
               </View>
 
               {/* Active window (solo activa la alarma dentro de un horario) */}

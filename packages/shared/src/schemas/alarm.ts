@@ -22,6 +22,8 @@ export const activeWindowSchema = z.object({
   weekdays: z.array(z.number().int().min(0).max(6)).optional(),
 });
 
+export const locationRepeatSchema = z.enum(['once', 'always']);
+
 export const locationConfigSchema = z.object({
   mode: z.enum(['saved_place', 'custom_point']),
   placeId: z.string().uuid().optional(),
@@ -33,12 +35,17 @@ export const locationConfigSchema = z.object({
     })
     .optional(),
   event: locationEventSchema,
+  repeat: locationRepeatSchema.optional(),
   activeWindow: activeWindowSchema.optional(),
 });
 
-// Input al crear una alarma. ownerId NO viene del cliente: por defecto es el
-// usuario autenticado. Para que un amigo cree alarma en agenda ajena (Fase 4)
-// se añadirá un campo opcional `ownerId` validado contra friendships.
+// Input al crear una alarma. Si `ownerId` viene del cliente y difiere del
+// usuario autenticado, el backend valida:
+//  1) hay friendship `accepted` entre ambos
+//  2) si la alarma referencia un saved_place, ese place pertenece a ownerId y
+//     existe un place_share con el creator
+// El status final (`active` vs `pending_acceptance`) lo decide el backend a
+// partir de `trust_level` de la friendship.
 export const createAlarmSchema = z
   .object({
     title: z.string().min(1).max(200),
@@ -46,6 +53,7 @@ export const createAlarmSchema = z
     triggerType: triggerTypeSchema,
     timeConfig: timeConfigSchema.optional(),
     locationConfig: locationConfigSchema.optional(),
+    ownerId: z.string().uuid().optional(),
   })
   .refine(
     (data) => {

@@ -9,6 +9,7 @@ import { auth } from './auth.js';
 import { requireAuth } from './middleware/requireAuth.js';
 import placesRouter from './routes/places.js';
 import alarmsRouter from './routes/alarms.js';
+import friendsRouter from './routes/friends.js';
 
 const app = express();
 
@@ -48,6 +49,7 @@ app.get('/api/me', requireAuth, (req: Request, res: Response) => {
 
 app.use('/api/places', placesRouter);
 app.use('/api/alarms', alarmsRouter);
+app.use('/api/friends', friendsRouter);
 
 app.use((_req: Request, res: Response) => {
   res.status(404).json({ error: 'Not Found' });

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAlarms } from '../alarms/hooks';
 import { usePlaces } from '../places/hooks';
 import { useAuthStore } from '../auth/store';
@@ -24,12 +24,25 @@ export function useGeofenceSync(): GeofenceSyncState {
   const { data: alarms } = useAlarms();
   const { data: places } = usePlaces();
   const status = useAuthStore((s) => s.status);
+  const userId = useAuthStore((s) => s.user?.id);
 
   const [state, setState] = useState<GeofenceSyncState>({
     lastResult: null,
     lastError: null,
   });
   const lastFingerprint = useRef<string | null>(null);
+
+  // Solo las alarmas que pertenecen al usuario actual y están aceptadas
+  // (status='active') deben generar geofences en este device. Las que he
+  // creado para un amigo viven en el device del amigo; las pendientes de
+  // aceptación todavía no deben dispararse.
+  const ownAlarms = useMemo(
+    () =>
+      (alarms ?? []).filter(
+        (a) => a.ownerId === userId && a.status === 'active',
+      ),
+    [alarms, userId],
+  );
 
   useEffect(() => {
     if (status !== 'authenticated') {
@@ -40,7 +53,7 @@ export function useGeofenceSync(): GeofenceSyncState {
     if (!alarms || !places) return;
 
     const fingerprint = JSON.stringify({
-      a: alarms
+      a: ownAlarms
         .filter((a) => a.isActive && a.triggerType !== 'time' && a.locationConfig)
         .map((a) => ({
           id: a.id,
@@ -58,7 +71,7 @@ export function useGeofenceSync(): GeofenceSyncState {
     if (fingerprint === lastFingerprint.current) return;
     lastFingerprint.current = fingerprint;
 
-    syncGeofences({ alarms, places })
+    syncGeofences({ alarms: ownAlarms, places })
       .then((res) => setState({ lastResult: res, lastError: null }))
       .catch((err) =>
         setState({
@@ -66,7 +79,7 @@ export function useGeofenceSync(): GeofenceSyncState {
           lastError: err instanceof Error ? err.message : String(err),
         }),
       );
-  }, [alarms, places, status]);
+  }, [alarms, places, status, ownAlarms]);
 
   return state;
 }
