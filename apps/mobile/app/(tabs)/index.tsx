@@ -21,6 +21,7 @@ import {
 import { usePlaces } from '@/lib/places/hooks';
 import { useFriends } from '@/lib/friends/hooks';
 import { useAuthStore } from '@/lib/auth/store';
+import { useToast } from '@/lib/ui/toast';
 import { formatAlarmSummary, type FormatAlarmDeps } from '@/lib/alarms/format';
 import {
   cancelAlarmNotificationByAlarmId,
@@ -52,27 +53,30 @@ function PendingAlarmCard({
   const { t } = useTranslation();
   return (
     <View className="bg-amber-50 border border-amber-300 rounded-lg p-3 mb-2">
-      <View className="flex-row items-start mb-3">
-        <View className="w-10 h-10 rounded-full bg-amber-100 items-center justify-center mr-3">
-          <Ionicons name={iconFor(alarm)} size={20} color="#D97706" />
-        </View>
-        <View className="flex-1">
-          <Text
-            className="text-base font-semibold text-gray-900"
-            numberOfLines={1}
-          >
-            {alarm.title}
-          </Text>
-          {summary ? (
-            <Text className="text-xs text-gray-500" numberOfLines={1}>
-              {summary}
+      <Link href={`/alarm/${alarm.id}` as never} asChild>
+        <Pressable className="flex-row items-start mb-3 active:opacity-70">
+          <View className="w-10 h-10 rounded-full bg-amber-100 items-center justify-center mr-3">
+            <Ionicons name={iconFor(alarm)} size={20} color="#D97706" />
+          </View>
+          <View className="flex-1">
+            <Text
+              className="text-base font-semibold text-gray-900"
+              numberOfLines={1}
+            >
+              {alarm.title}
             </Text>
-          ) : null}
-          <Text className="text-xs text-amber-700 mt-0.5">
-            {t('alarms.fromFriend', { name: creatorName })}
-          </Text>
-        </View>
-      </View>
+            {summary ? (
+              <Text className="text-xs text-gray-500" numberOfLines={1}>
+                {summary}
+              </Text>
+            ) : null}
+            <Text className="text-xs text-amber-700 mt-0.5">
+              {t('alarms.fromFriend', { name: creatorName })}
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color="#D97706" />
+        </Pressable>
+      </Link>
       <View className="flex-row">
         <Pressable
           onPress={onAccept}
@@ -166,6 +170,7 @@ export default function AgendaScreen() {
   const deleteAlarm = useDeleteAlarm();
   const acceptAlarm = useAcceptAlarm();
   const rejectAlarm = useRejectAlarm();
+  const { showToast } = useToast();
 
   // Pendientes: alarmas en mi agenda creadas por un amigo, esperando mi
   // aceptación. Se muestran en un banner separado al inicio.
@@ -228,6 +233,7 @@ export default function AgendaScreen() {
             try {
               await cancelAlarmNotificationByAlarmId(alarm.id);
               await deleteAlarm.mutateAsync(alarm.id);
+              showToast(t('alarms.deletedToast'), 'success');
             } catch {
               Alert.alert(t('common.error'), t('alarms.deleteError'));
             }
@@ -256,6 +262,7 @@ export default function AgendaScreen() {
       }
       // Si tiene componente de lugar, useGeofenceSync detectará el cambio
       // en el cache de alarmas y registrará el geofence en el siguiente tick.
+      showToast(t('alarms.acceptedToast'), 'success');
     } catch {
       Alert.alert(t('common.error'), t('alarms.acceptError'));
     }
@@ -273,6 +280,7 @@ export default function AgendaScreen() {
           onPress: async () => {
             try {
               await rejectAlarm.mutateAsync(alarm.id);
+              showToast(t('alarms.rejectedToast'), 'success');
             } catch {
               Alert.alert(t('common.error'), t('alarms.rejectError'));
             }

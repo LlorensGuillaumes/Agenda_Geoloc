@@ -137,7 +137,11 @@
     "statusActive": "Acceptada",
     "withdrawConfirmTitle": "Retirar alarma",
     "withdrawConfirmBody": "Segur que vols retirar \"{{title}}\" de l'agenda de {{name}}?",
-    "withdrawCta": "Retira"
+    "withdrawCta": "Retira",
+    "acceptedToast": "Alarma acceptada",
+    "rejectedToast": "Alarma rebutjada",
+    "deletedToast": "Alarma eliminada",
+    "withdrawnToast": "Alarma retirada"
   },
   "places": {
     "empty": "Encara no tens llocs guardats",
@@ -188,7 +192,13 @@
     "removeConfirmTitle": "Eliminar amistat",
     "removeConfirmBody": "Segur que vols deixar de ser amic de {{name}}? Les alarmes que us hàgiu creat es mantindran.",
     "autoAcceptLabel": "Accepta automàticament les seves alarmes",
-    "autoAcceptHint": "Si està actiu, les alarmes que aquest amic et creu apareixeran a la teva agenda directament. Si no, hauràs d'acceptar-les manualment."
+    "autoAcceptHint": "Si està actiu, les alarmes que aquest amic et creu apareixeran a la teva agenda directament. Si no, hauràs d'acceptar-les manualment.",
+    "acceptedToast": "{{name}} és ara amic teu",
+    "rejectedToast": "Sol·licitud descartada",
+    "removedToast": "{{name}} ja no és amic teu",
+    "acceptError": "No s'ha pogut acceptar la sol·licitud.",
+    "rejectError": "No s'ha pogut descartar la sol·licitud.",
+    "removeError": "No s'ha pogut eliminar l'amistat."
   },
   "settings": {
     "language": "Idioma",

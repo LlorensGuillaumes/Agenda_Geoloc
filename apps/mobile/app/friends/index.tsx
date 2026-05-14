@@ -26,6 +26,7 @@ import {
   useSetTrustLevel,
 } from '@/lib/friends/hooks';
 import { ApiError, type PublicUser } from '@/lib/api/client';
+import { useToast } from '@/lib/ui/toast';
 
 function Avatar({ user, size = 40 }: { user: { name: string }; size?: number }) {
   const initials = user.name
@@ -54,6 +55,7 @@ function SectionTitle({ children }: { children: string }) {
 
 function AddFriend() {
   const { t } = useTranslation();
+  const { showToast } = useToast();
   const [email, setEmail] = useState('');
   const [found, setFound] = useState<PublicUser | null>(null);
   const search = useSearchFriend();
@@ -84,7 +86,7 @@ function AddFriend() {
     if (!found) return;
     try {
       await send.mutateAsync(found.id);
-      Alert.alert(t('friends.requestSent'), '');
+      showToast(t('friends.requestSent'), 'success');
       setFound(null);
       setEmail('');
     } catch (err) {
@@ -156,12 +158,31 @@ function AddFriend() {
 
 export default function FriendsScreen() {
   const { t } = useTranslation();
+  const { showToast } = useToast();
   const friends = useFriends();
   const requests = useFriendRequests();
   const accept = useAcceptFriendRequest();
   const reject = useRejectFriendRequest();
   const remove = useRemoveFriend();
   const setTrust = useSetTrustLevel();
+
+  const handleAccept = async (id: string, name: string) => {
+    try {
+      await accept.mutateAsync(id);
+      showToast(t('friends.acceptedToast', { name }), 'success');
+    } catch {
+      showToast(t('friends.acceptError'), 'error');
+    }
+  };
+
+  const handleReject = async (id: string) => {
+    try {
+      await reject.mutateAsync(id);
+      showToast(t('friends.rejectedToast'), 'info');
+    } catch {
+      showToast(t('friends.rejectError'), 'error');
+    }
+  };
 
   const incoming = (requests.data ?? []).filter((r) => r.direction === 'incoming');
   const outgoing = (requests.data ?? []).filter((r) => r.direction === 'outgoing');
@@ -176,7 +197,14 @@ export default function FriendsScreen() {
         {
           text: t('common.delete'),
           style: 'destructive',
-          onPress: () => remove.mutate(friendshipId),
+          onPress: async () => {
+            try {
+              await remove.mutateAsync(friendshipId);
+              showToast(t('friends.removedToast', { name }), 'info');
+            } catch {
+              showToast(t('friends.removeError'), 'error');
+            }
+          },
         },
       ],
     );
@@ -219,13 +247,13 @@ export default function FriendsScreen() {
                     <Text className="text-xs text-gray-500">{r.requester.email}</Text>
                   </View>
                   <Pressable
-                    onPress={() => accept.mutate(r.id)}
+                    onPress={() => handleAccept(r.id, r.requester.name)}
                     className="bg-green-600 rounded-lg px-3 py-2 mr-2 active:bg-green-700"
                   >
                     <Ionicons name="checkmark" size={18} color="#fff" />
                   </Pressable>
                   <Pressable
-                    onPress={() => reject.mutate(r.id)}
+                    onPress={() => handleReject(r.id)}
                     className="bg-gray-300 rounded-lg px-3 py-2 active:bg-gray-400"
                   >
                     <Ionicons name="close" size={18} color="#374151" />
@@ -256,7 +284,7 @@ export default function FriendsScreen() {
                     {t('friends.pending')}
                   </Text>
                   <Pressable
-                    onPress={() => reject.mutate(r.id)}
+                    onPress={() => handleReject(r.id)}
                     className="bg-gray-200 rounded-lg px-2 py-1 active:bg-gray-300"
                   >
                     <Text className="text-xs text-gray-700">{t('common.cancel')}</Text>

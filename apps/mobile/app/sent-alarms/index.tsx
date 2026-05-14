@@ -16,6 +16,7 @@ import { usePlaces, useSharedWithMePlaces } from '@/lib/places/hooks';
 import { useFriends } from '@/lib/friends/hooks';
 import { useAuthStore } from '@/lib/auth/store';
 import { formatAlarmSummary, type FormatAlarmDeps } from '@/lib/alarms/format';
+import { useToast } from '@/lib/ui/toast';
 import type { Alarm, Place } from '@/lib/api/client';
 
 function iconFor(alarm: Alarm): keyof typeof Ionicons.glyphMap {
@@ -84,6 +85,7 @@ export default function SentAlarmsScreen() {
   const { data: friends } = useFriends();
   const userId = useAuthStore((s) => s.user?.id);
   const deleteAlarm = useDeleteAlarm();
+  const { showToast } = useToast();
 
   const sentAlarms = useMemo(() => {
     if (!alarms || !userId) return [];
@@ -149,6 +151,7 @@ export default function SentAlarmsScreen() {
           onPress: async () => {
             try {
               await deleteAlarm.mutateAsync(alarm.id);
+              showToast(t('alarms.withdrawnToast'), 'success');
             } catch {
               Alert.alert(t('common.error'), t('alarms.deleteError'));
             }

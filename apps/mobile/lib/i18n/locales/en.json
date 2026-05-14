@@ -137,7 +137,11 @@
     "statusActive": "Accepted",
     "withdrawConfirmTitle": "Withdraw alarm",
     "withdrawConfirmBody": "Are you sure you want to withdraw \"{{title}}\" from {{name}}'s agenda?",
-    "withdrawCta": "Withdraw"
+    "withdrawCta": "Withdraw",
+    "acceptedToast": "Alarm accepted",
+    "rejectedToast": "Alarm rejected",
+    "deletedToast": "Alarm deleted",
+    "withdrawnToast": "Alarm withdrawn"
   },
   "places": {
     "empty": "No saved places yet",
@@ -188,7 +192,13 @@
     "removeConfirmTitle": "Remove friend",
     "removeConfirmBody": "Are you sure you want to stop being friends with {{name}}? Alarms you've created for each other will stay.",
     "autoAcceptLabel": "Auto-accept their alarms",
-    "autoAcceptHint": "When on, alarms this friend creates for you appear in your agenda right away. When off, you'll need to accept them manually."
+    "autoAcceptHint": "When on, alarms this friend creates for you appear in your agenda right away. When off, you'll need to accept them manually.",
+    "acceptedToast": "{{name}} is now your friend",
+    "rejectedToast": "Request dismissed",
+    "removedToast": "{{name}} is no longer your friend",
+    "acceptError": "Could not accept the request.",
+    "rejectError": "Could not dismiss the request.",
+    "removeError": "Could not remove the friend."
   },
   "settings": {
     "language": "Language",

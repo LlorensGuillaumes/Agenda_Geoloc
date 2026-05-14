@@ -10,12 +10,21 @@ import {
   type LocationConfig,
   type TimeConfig,
 } from '@/lib/api/client';
-import { useAlarms, useUpdateAlarm, useDeleteAlarm } from '@/lib/alarms/hooks';
-import { usePlaces } from '@/lib/places/hooks';
+import {
+  useAcceptAlarm,
+  useAlarms,
+  useDeleteAlarm,
+  useRejectAlarm,
+  useUpdateAlarm,
+} from '@/lib/alarms/hooks';
+import { usePlaces, useSharedWithMePlaces } from '@/lib/places/hooks';
+import { useFriends } from '@/lib/friends/hooks';
+import { useAuthStore } from '@/lib/auth/store';
 import {
   cancelAlarmNotificationByAlarmId,
   scheduleAlarmNotification,
 } from '@/lib/notifications';
+import { useToast } from '@/lib/ui/toast';
 
 function triggerLabelKey(t: Alarm['triggerType']): string {
   if (t === 'time') return 'alarms.trigger.time';
@@ -83,8 +92,14 @@ export default function AlarmDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const alarmsQuery = useAlarms();
   const placesQuery = usePlaces();
+  const sharedPlacesQuery = useSharedWithMePlaces();
+  const friendsQuery = useFriends();
+  const userId = useAuthStore((s) => s.user?.id);
   const updateAlarm = useUpdateAlarm();
   const deleteAlarm = useDeleteAlarm();
+  const acceptAlarm = useAcceptAlarm();
+  const rejectAlarm = useRejectAlarm();
+  const { showToast } = useToast();
   const [busy, setBusy] = useState(false);
 
   const alarm = alarmsQuery.data?.find((a) => a.id === id);
@@ -185,7 +200,12 @@ export default function AlarmDetailScreen() {
     const cfg = alarm.locationConfig;
     if (!cfg) return null;
     if (cfg.mode === 'saved_place' && cfg.placeId) {
-      const place = placesQuery.data?.find((p) => p.id === cfg.placeId);
+      // Busca primero en lugares propios, luego en compartidos conmigo
+      // (porque la alarma puede referenciar un place del owner — cuando el
+      // owner soy yo o cuando un amigo me ha compartido el lugar).
+      const place =
+        placesQuery.data?.find((p) => p.id === cfg.placeId) ??
+        sharedPlacesQuery.data?.find((p) => p.id === cfg.placeId);
       return place?.name ?? t('alarms.unknownPlace');
     }
     if (cfg.mode === 'custom_point' && cfg.customPoint) {
@@ -193,6 +213,65 @@ export default function AlarmDetailScreen() {
     }
     return null;
   })();
+
+  const isPendingForMe =
+    alarm.ownerId === userId && alarm.status === 'pending_acceptance';
+  const isSentByMe = alarm.creatorId === userId && alarm.ownerId !== userId;
+
+  const friendByUserId = (uid: string): string | undefined =>
+    friendsQuery.data?.find((f) => f.friend?.id === uid)?.friend?.name;
+
+  const handleAccept = async () => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      const accepted = await acceptAlarm.mutateAsync(alarm.id);
+      if (
+        (accepted.triggerType === 'time' ||
+          accepted.triggerType === 'time_and_location') &&
+        accepted.timeConfig
+      ) {
+        await scheduleAlarmNotification({
+          alarmId: accepted.id,
+          title: accepted.title,
+          body: accepted.notes ?? undefined,
+          timeConfig: accepted.timeConfig,
+        });
+      }
+      showToast(t('alarms.acceptedToast'), 'success');
+      router.back();
+    } catch {
+      showToast(t('alarms.acceptError'), 'error');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleReject = () => {
+    Alert.alert(
+      t('alarms.rejectConfirmTitle'),
+      t('alarms.rejectConfirmBody', { title: alarm.title }),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('alarms.rejectCta'),
+          style: 'destructive',
+          onPress: async () => {
+            setBusy(true);
+            try {
+              await rejectAlarm.mutateAsync(alarm.id);
+              showToast(t('alarms.rejectedToast'), 'success');
+              router.back();
+            } catch {
+              showToast(t('alarms.rejectError'), 'error');
+            } finally {
+              setBusy(false);
+            }
+          },
+        },
+      ],
+    );
+  };
 
   return (
     <SafeAreaView className="flex-1 bg-gray-50" edges={['bottom']}>
@@ -241,32 +320,86 @@ export default function AlarmDetailScreen() {
           </View>
         </View>
 
-        <View className="bg-white rounded-lg border border-gray-200 p-4 mb-4 flex-row items-center justify-between">
-          <View className="flex-1 mr-3">
-            <Text className="text-base font-medium text-gray-900">
-              {t('alarms.activeToggle')}
+        {isPendingForMe ? (
+          <View className="bg-amber-50 border border-amber-300 rounded-lg p-4 mb-4">
+            <Text className="text-sm text-amber-800 mb-3">
+              {t('alarms.fromFriend', {
+                name: friendByUserId(alarm.creatorId) ?? t('alarms.unknownFriend'),
+              })}
             </Text>
-            <Text className="text-xs text-gray-500 mt-1">
-              {alarm.isActive
-                ? t('alarms.activeOn')
-                : t('alarms.activeOff')}
-            </Text>
+            <View className="flex-row">
+              <Pressable
+                onPress={handleAccept}
+                disabled={busy}
+                className={`flex-1 rounded-lg py-3 mr-2 items-center ${
+                  busy ? 'bg-green-400' : 'bg-green-600 active:bg-green-700'
+                }`}
+              >
+                <Text className="text-white font-semibold">
+                  {t('alarms.acceptCta')}
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={handleReject}
+                disabled={busy}
+                className="flex-1 bg-white border border-gray-300 rounded-lg py-3 items-center active:bg-gray-100"
+              >
+                <Text className="text-gray-700 font-semibold">
+                  {t('alarms.rejectCta')}
+                </Text>
+              </Pressable>
+            </View>
           </View>
-          <Switch
-            value={alarm.isActive}
-            onValueChange={handleToggleActive}
-            disabled={busy}
-            trackColor={{ false: '#E5E7EB', true: '#3B82F6' }}
-          />
-        </View>
+        ) : isSentByMe ? (
+          <View className="bg-white rounded-lg border border-gray-200 p-4 mb-4">
+            <Text className="text-sm text-gray-700 mb-1">
+              {t('alarms.sentTo', {
+                name: friendByUserId(alarm.ownerId) ?? t('alarms.unknownFriend'),
+              })}
+            </Text>
+            <Text className="text-xs text-gray-500 mb-3">
+              {alarm.status === 'pending_acceptance'
+                ? t('alarms.statusPending')
+                : t('alarms.statusActive')}
+            </Text>
+            <Pressable
+              onPress={handleDelete}
+              disabled={busy}
+              className="border border-red-300 rounded-lg py-3 items-center active:bg-red-50"
+            >
+              <Text className="text-red-600 font-semibold">
+                {t('alarms.withdrawCta')}
+              </Text>
+            </Pressable>
+          </View>
+        ) : (
+          <>
+            <View className="bg-white rounded-lg border border-gray-200 p-4 mb-4 flex-row items-center justify-between">
+              <View className="flex-1 mr-3">
+                <Text className="text-base font-medium text-gray-900">
+                  {t('alarms.activeToggle')}
+                </Text>
+                <Text className="text-xs text-gray-500 mt-1">
+                  {alarm.isActive ? t('alarms.activeOn') : t('alarms.activeOff')}
+                </Text>
+              </View>
+              <Switch
+                value={alarm.isActive}
+                onValueChange={handleToggleActive}
+                disabled={busy}
+                trackColor={{ false: '#E5E7EB', true: '#3B82F6' }}
+              />
+            </View>
 
-        <Pressable
-          onPress={handleDelete}
-          disabled={busy}
-          className="border border-red-300 bg-white rounded-lg py-3 items-center active:bg-red-50"
-        >
-          <Text className="text-red-600 font-semibold">{t('common.delete')}</Text>
-        </Pressable>
+            <Pressable
+              onPress={handleDelete}
+              disabled={busy}
+              className="border border-red-300 bg-white rounded-lg py-3 items-center active:bg-red-50"
+            >
+              <Text className="text-red-600 font-semibold">{t('common.delete')}</Text>
+            </Pressable>
+          </>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
