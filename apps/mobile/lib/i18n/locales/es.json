@@ -127,7 +127,17 @@
     "acceptError": "No se ha podido aceptar la alarma.",
     "rejectError": "No se ha podido rechazar la alarma.",
     "rejectConfirmTitle": "Rechazar alarma",
-    "rejectConfirmBody": "¿Seguro que quieres rechazar \"{{title}}\"? La alarma se borrará."
+    "rejectConfirmBody": "¿Seguro que quieres rechazar \"{{title}}\"? La alarma se borrará.",
+    "sentTitle": "Alarmas enviadas",
+    "sentEmpty": "No has enviado ninguna alarma todavía",
+    "sentEmptyHint": "Cuando crees alarmas en la agenda de un amigo aparecerán aquí",
+    "sentHint": "Estas alarmas viven en el device de tu amigo. Puedes retirarlas si aún no han disparado.",
+    "sentTo": "Para {{name}}",
+    "statusPending": "Pendiente de su aceptación",
+    "statusActive": "Aceptada",
+    "withdrawConfirmTitle": "Retirar alarma",
+    "withdrawConfirmBody": "¿Seguro que quieres retirar \"{{title}}\" de la agenda de {{name}}?",
+    "withdrawCta": "Retirar"
   },
   "places": {
     "empty": "Aún no tienes lugares guardados",

@@ -127,7 +127,17 @@
     "acceptError": "No s'ha pogut acceptar l'alarma.",
     "rejectError": "No s'ha pogut rebutjar l'alarma.",
     "rejectConfirmTitle": "Rebutjar alarma",
-    "rejectConfirmBody": "Segur que vols rebutjar \"{{title}}\"? L'alarma s'esborrarà."
+    "rejectConfirmBody": "Segur que vols rebutjar \"{{title}}\"? L'alarma s'esborrarà.",
+    "sentTitle": "Alarmes enviades",
+    "sentEmpty": "No has enviat cap alarma encara",
+    "sentEmptyHint": "Quan creïs alarmes a l'agenda d'un amic apareixeran aquí",
+    "sentHint": "Aquestes alarmes viuen al device del teu amic. Les pots retirar si encara no han disparat.",
+    "sentTo": "A {{name}}",
+    "statusPending": "Pendent que ho accepti",
+    "statusActive": "Acceptada",
+    "withdrawConfirmTitle": "Retirar alarma",
+    "withdrawConfirmBody": "Segur que vols retirar \"{{title}}\" de l'agenda de {{name}}?",
+    "withdrawCta": "Retira"
   },
   "places": {
     "empty": "Encara no tens llocs guardats",

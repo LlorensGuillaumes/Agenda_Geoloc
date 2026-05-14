@@ -127,7 +127,17 @@
     "acceptError": "Could not accept the alarm.",
     "rejectError": "Could not reject the alarm.",
     "rejectConfirmTitle": "Reject alarm",
-    "rejectConfirmBody": "Are you sure you want to reject \"{{title}}\"? The alarm will be deleted."
+    "rejectConfirmBody": "Are you sure you want to reject \"{{title}}\"? The alarm will be deleted.",
+    "sentTitle": "Sent alarms",
+    "sentEmpty": "You haven't sent any alarms yet",
+    "sentEmptyHint": "Alarms you create on a friend's agenda will appear here",
+    "sentHint": "These alarms live on your friend's device. You can withdraw them if they haven't fired yet.",
+    "sentTo": "To {{name}}",
+    "statusPending": "Waiting for them to accept",
+    "statusActive": "Accepted",
+    "withdrawConfirmTitle": "Withdraw alarm",
+    "withdrawConfirmBody": "Are you sure you want to withdraw \"{{title}}\" from {{name}}'s agenda?",
+    "withdrawCta": "Withdraw"
   },
   "places": {
     "empty": "No saved places yet",

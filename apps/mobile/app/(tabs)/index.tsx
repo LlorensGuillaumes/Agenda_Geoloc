@@ -286,11 +286,21 @@ export default function AgendaScreen() {
     <SafeAreaView className="flex-1 bg-gray-50">
       <View className="flex-row items-center justify-between px-6 pt-2 pb-4">
         <Text className="text-2xl font-bold text-gray-900">{t('tabs.agenda')}</Text>
-        <Link href={'/alarm/new' as never} asChild>
-          <Pressable className="w-10 h-10 rounded-full bg-blue-600 items-center justify-center active:bg-blue-700">
-            <Ionicons name="add" size={24} color="#fff" />
-          </Pressable>
-        </Link>
+        <View className="flex-row items-center">
+          <Link href={'/sent-alarms' as never} asChild>
+            <Pressable
+              className="w-10 h-10 rounded-full bg-white border border-gray-200 items-center justify-center mr-2 active:bg-gray-100"
+              hitSlop={6}
+            >
+              <Ionicons name="paper-plane-outline" size={20} color="#374151" />
+            </Pressable>
+          </Link>
+          <Link href={'/alarm/new' as never} asChild>
+            <Pressable className="w-10 h-10 rounded-full bg-blue-600 items-center justify-center active:bg-blue-700">
+              <Ionicons name="add" size={24} color="#fff" />
+            </Pressable>
+          </Link>
+        </View>
       </View>
 
       {isLoading ? (
