@@ -123,11 +123,37 @@ Muestra users, accounts (con presencia de password) y sesiones recientes en Turs
 
 ### API (Render)
 
-El backend está pensado para desplegar en Render como Web Service:
+El backend se ejecuta con `tsx` directamente en producción (sin paso de build); a esta escala el coste extra de memoria es trivial y nos ahorra bundlear los workspaces `@agenda/db` y `@agenda/shared` que importan TypeScript directamente.
 
-- Build command: `pnpm install && pnpm --filter @agenda/api build`
-- Start command: `node apps/api/dist/index.js`
-- Variables: las mismas del `.env` (Turso URL/token, secret, BETTER_AUTH_URL apuntando al dominio Render)
+Crear un **Web Service** en Render apuntando a este repo con:
+
+- **Root directory**: vacío (raíz del repo)
+- **Build command**: `npm install`
+- **Start command**: `npm run start:api`
+- **Environment**: `Node`
+- **Plan**: Free (cold start ~30s tras 15min sin tráfico) o Starter ($7/mes, sin hibernación)
+
+Variables de entorno a configurar en el panel de Render:
+
+| Variable | Valor |
+|---|---|
+| `NODE_ENV` | `production` |
+| `DATABASE_URL` | `libsql://...` (tu Turso) |
+| `DATABASE_AUTH_TOKEN` | token de Turso |
+| `BETTER_AUTH_SECRET` | 32 bytes hex (mismo de dev o uno nuevo) |
+| `BETTER_AUTH_URL` | URL pública del servicio Render, p.ej. `https://agenda-api.onrender.com` |
+
+> `PORT` lo asigna Render automáticamente; nuestro `env.ts` lo lee con `z.coerce.number()`.
+
+**Migraciones**: se siguen aplicando desde local con `pnpm db:migrate` apuntando a Turso. Render solo consume la DB; no ejecuta migraciones.
+
+Tras el primer deploy, actualiza `apps/mobile/.env` para que el móvil apunte al backend público:
+
+```env
+EXPO_PUBLIC_API_URL=https://agenda-api.onrender.com
+```
+
+Y reconstruye la APK (`cd apps/mobile && npx expo run:android`) para que los amigos puedan usarla sin estar en tu VPN.
 
 ### Mobile
 

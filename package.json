@@ -13,7 +13,7 @@
   "scripts": {
     "dev:api": "npm run dev -w @agenda/api",
     "dev:mobile": "npm start -w mobile",
-    "build:api": "npm run build -w @agenda/api",
+    "start:api": "npm start -w @agenda/api",
     "db:generate": "npm run db:generate -w @agenda/db",
     "db:migrate": "npm run db:migrate -w @agenda/db",
     "db:studio": "npm run db:studio -w @agenda/db",
