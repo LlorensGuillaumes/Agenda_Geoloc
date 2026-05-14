@@ -8,6 +8,7 @@ import {
 } from '@agenda/shared';
 import { db } from '../db.js';
 import { requireAuth } from '../middleware/requireAuth.js';
+import { sendPush } from '../push.js';
 
 const router = Router();
 router.use(requireAuth);
@@ -76,6 +77,14 @@ router.post('/requests', async (req, res, next) => {
       .values({ requesterId, addresseeId })
       .returning();
     res.status(201).json(row);
+
+    // Push fire-and-forget al addressee (no bloquea la respuesta).
+    sendPush({
+      to: target.pushToken ?? '',
+      title: 'Nueva solicitud de amistad',
+      body: `${req.session!.user.name} te ha enviado una solicitud de amistad`,
+      data: { type: 'friend_request', friendshipId: row.id },
+    });
   } catch (err) {
     next(err);
   }
@@ -161,6 +170,18 @@ router.post('/requests/:id/accept', async (req, res, next) => {
       .where(eq(friendships.id, fr.id))
       .returning();
     res.json(row);
+
+    // Push al requester avisando que su solicitud ha sido aceptada.
+    const [requester] = await db
+      .select({ pushToken: user.pushToken })
+      .from(user)
+      .where(eq(user.id, fr.requesterId));
+    sendPush({
+      to: requester?.pushToken ?? '',
+      title: 'Solicitud aceptada',
+      body: `${req.session!.user.name} ha aceptado tu solicitud de amistad`,
+      data: { type: 'friend_accepted', friendshipId: fr.id },
+    });
   } catch (err) {
     next(err);
   }

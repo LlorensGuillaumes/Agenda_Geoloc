@@ -142,6 +142,7 @@ Variables de entorno a configurar en el panel de Render:
 | `DATABASE_AUTH_TOKEN` | token de Turso |
 | `BETTER_AUTH_SECRET` | 32 bytes hex (mismo de dev o uno nuevo) |
 | `BETTER_AUTH_URL` | URL pública del servicio Render, p.ej. `https://agenda-api.onrender.com` |
+| `EXPO_ACCESS_TOKEN` *(opcional)* | Token de Expo (Account Settings → Access Tokens) para que el backend envíe push notifications con "Enhanced Push Security". Sin token también funciona, pero con menos protección anti-abuse. |
 
 > `PORT` lo asigna Render automáticamente; nuestro `env.ts` lo lee con `z.coerce.number()`.
 

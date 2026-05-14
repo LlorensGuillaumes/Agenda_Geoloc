@@ -1,9 +1,10 @@
 import { Router } from 'express';
 import { and, desc, eq, or } from 'drizzle-orm';
-import { alarms, friendships, placeShares, places } from '@agenda/db';
+import { alarms, friendships, placeShares, places, user } from '@agenda/db';
 import { createAlarmSchema, updateAlarmSchema } from '@agenda/shared';
 import { db } from '../db.js';
 import { requireAuth } from '../middleware/requireAuth.js';
+import { sendPush } from '../push.js';
 
 const router = Router();
 router.use(requireAuth);
@@ -123,6 +124,28 @@ router.post('/', async (req, res, next) => {
       })
       .returning();
     res.status(201).json(row);
+
+    // Push fire-and-forget al owner cuando es cross-agenda. Si el status es
+    // pending_acceptance, el push le pide confirmación; si es active (auto-
+    // accept), simplemente le avisa que tiene una alarma nueva.
+    if (isCrossAgenda) {
+      const [owner] = await db
+        .select({ pushToken: user.pushToken })
+        .from(user)
+        .where(eq(user.id, targetOwnerId));
+      const requiresAccept = status === 'pending_acceptance';
+      sendPush({
+        to: owner?.pushToken ?? '',
+        title: requiresAccept
+          ? 'Alarma pendiente de aceptar'
+          : 'Nueva alarma en tu agenda',
+        body: `${req.session!.user.name}: "${row.title}"`,
+        data: {
+          type: requiresAccept ? 'alarm_pending' : 'alarm_created',
+          alarmId: row.id,
+        },
+      });
+    }
   } catch (err) {
     next(err);
   }
@@ -204,6 +227,20 @@ router.post('/:id/accept', async (req, res, next) => {
       .where(eq(alarms.id, existing.id))
       .returning();
     res.json(row);
+
+    // Push al creator (solo si es otro user, lo normal en pending_acceptance).
+    if (existing.creatorId !== existing.ownerId) {
+      const [creator] = await db
+        .select({ pushToken: user.pushToken })
+        .from(user)
+        .where(eq(user.id, existing.creatorId));
+      sendPush({
+        to: creator?.pushToken ?? '',
+        title: 'Alarma aceptada',
+        body: `${req.session!.user.name} ha aceptado "${row.title}"`,
+        data: { type: 'alarm_accepted', alarmId: row.id },
+      });
+    }
   } catch (err) {
     next(err);
   }
@@ -232,6 +269,20 @@ router.post('/:id/reject', async (req, res, next) => {
     }
     await db.delete(alarms).where(eq(alarms.id, existing.id));
     res.status(204).send();
+
+    // Push al creator avisando del rechazo (solo si era cross-agenda).
+    if (existing.creatorId !== existing.ownerId) {
+      const [creator] = await db
+        .select({ pushToken: user.pushToken })
+        .from(user)
+        .where(eq(user.id, existing.creatorId));
+      sendPush({
+        to: creator?.pushToken ?? '',
+        title: 'Alarma rechazada',
+        body: `${req.session!.user.name} ha rechazado "${existing.title}"`,
+        data: { type: 'alarm_rejected', alarmId: existing.id },
+      });
+    }
   } catch (err) {
     next(err);
   }
