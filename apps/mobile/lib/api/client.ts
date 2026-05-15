@@ -178,7 +178,10 @@ export type FriendRequest = {
   status: 'pending';
   trustLevel: TrustLevel;
   createdAt: string;
-  requester: PublicUser;
+  // Solo uno de los dos lados está poblado: `requester` cuando es
+  // incoming (alguien me la ha enviado), `addressee` cuando es outgoing
+  // (yo se la he enviado). El otro siempre es null.
+  requester: PublicUser | null;
   addressee: PublicUser | null;
   direction: 'incoming' | 'outgoing';
 };

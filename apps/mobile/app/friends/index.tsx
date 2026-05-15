@@ -252,15 +252,15 @@ export default function FriendsScreen() {
                   key={r.id}
                   className="bg-white border border-gray-200 rounded-lg p-3 mb-2 flex-row items-center"
                 >
-                  <Avatar user={r.requester} />
+                  {r.requester ? <Avatar user={r.requester} /> : <Avatar user={{ name: '?' }} />}
                   <View className="flex-1 mx-3">
                     <Text className="text-sm font-semibold text-gray-900">
-                      {r.requester.name}
+                      {r.requester?.name ?? '—'}
                     </Text>
-                    <Text className="text-xs text-gray-500">{r.requester.email}</Text>
+                    <Text className="text-xs text-gray-500">{r.requester?.email ?? ''}</Text>
                   </View>
                   <Pressable
-                    onPress={() => handleAccept(r.id, r.requester.name)}
+                    onPress={() => handleAccept(r.id, r.requester?.name ?? '—')}
                     className="bg-green-600 rounded-lg px-3 py-2 mr-2 active:bg-green-700"
                   >
                     <Ionicons name="checkmark" size={18} color="#fff" />

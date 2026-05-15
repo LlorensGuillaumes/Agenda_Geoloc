@@ -92,52 +92,64 @@ router.post('/requests', async (req, res, next) => {
 
 // Lista solicitudes pendientes con info del otro usuario y dirección. El
 // cliente puede partir en "incoming"/"outgoing" según `direction`.
+//
+// Dos queries: una para outgoing (yo soy requester → "other" es addressee),
+// otra para incoming (yo soy addressee → "other" es requester). Cada una
+// con un único JOIN al user que actúa de "other", lo que garantiza que ese
+// objeto nunca sale null.
 router.get('/requests', async (req, res, next) => {
   try {
     const meId = req.session!.user.id;
-    const rows = await db
-      .select({
-        id: friendships.id,
-        requesterId: friendships.requesterId,
-        addresseeId: friendships.addresseeId,
-        status: friendships.status,
-        trustLevel: friendships.trustLevel,
-        createdAt: friendships.createdAt,
-        requester: {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          image: user.image,
-        },
-      })
+    const baseFields = {
+      id: friendships.id,
+      requesterId: friendships.requesterId,
+      addresseeId: friendships.addresseeId,
+      status: friendships.status,
+      trustLevel: friendships.trustLevel,
+      createdAt: friendships.createdAt,
+    };
+    const userFields = {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      image: user.image,
+    };
+
+    const outgoingRows = await db
+      .select({ ...baseFields, other: userFields })
+      .from(friendships)
+      .innerJoin(user, eq(user.id, friendships.addresseeId))
+      .where(
+        and(
+          eq(friendships.status, 'pending'),
+          eq(friendships.requesterId, meId),
+        ),
+      );
+    const incomingRows = await db
+      .select({ ...baseFields, other: userFields })
       .from(friendships)
       .innerJoin(user, eq(user.id, friendships.requesterId))
       .where(
         and(
           eq(friendships.status, 'pending'),
-          or(eq(friendships.requesterId, meId), eq(friendships.addresseeId, meId)),
+          eq(friendships.addresseeId, meId),
         ),
       );
-    // Resolver `addressee` por separado (Drizzle SQLite no soporta dos joins al
-    // mismo table alias sin alias explícito).
-    const ids = rows.map((r) => r.addresseeId);
-    const addressees = ids.length
-      ? await db
-          .select({
-            id: user.id,
-            name: user.name,
-            email: user.email,
-            image: user.image,
-          })
-          .from(user)
-          .where(inArray(user.id, ids))
-      : [];
-    const addresseeMap = new Map(addressees.map((a) => [a.id, a]));
-    const out = rows.map((r) => ({
-      ...r,
-      addressee: addresseeMap.get(r.addresseeId) ?? null,
-      direction: r.requesterId === meId ? 'outgoing' : 'incoming',
-    }));
+
+    const out = [
+      ...outgoingRows.map(({ other, ...r }) => ({
+        ...r,
+        direction: 'outgoing' as const,
+        requester: null,
+        addressee: other,
+      })),
+      ...incomingRows.map(({ other, ...r }) => ({
+        ...r,
+        direction: 'incoming' as const,
+        requester: other,
+        addressee: null,
+      })),
+    ];
     res.json(out);
   } catch (err) {
     next(err);
@@ -213,45 +225,47 @@ router.delete('/requests/:id', async (req, res, next) => {
 });
 
 // Lista amistades aceptadas con info del "otro" usuario.
+// Hacemos dos queries con JOIN explícito (una para cuando soy requester,
+// otra para cuando soy addressee) y las unimos. Garantiza que el "friend"
+// nunca sale null si la amistad existe — la versión anterior con un
+// segundo SELECT + inArray fallaba en producción al resolver el nombre.
 router.get('/', async (req, res, next) => {
   try {
     const meId = req.session!.user.id;
-    const rows = await db
-      .select()
+    const baseSelect = {
+      id: friendships.id,
+      status: friendships.status,
+      trustLevel: friendships.trustLevel,
+      createdAt: friendships.createdAt,
+      acceptedAt: friendships.acceptedAt,
+      friend: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        image: user.image,
+      },
+    };
+    const asRequester = await db
+      .select(baseSelect)
       .from(friendships)
+      .innerJoin(user, eq(user.id, friendships.addresseeId))
       .where(
         and(
           eq(friendships.status, 'accepted'),
-          or(eq(friendships.requesterId, meId), eq(friendships.addresseeId, meId)),
+          eq(friendships.requesterId, meId),
         ),
       );
-    const otherIds = rows.map((r) =>
-      r.requesterId === meId ? r.addresseeId : r.requesterId,
-    );
-    const others = otherIds.length
-      ? await db
-          .select({
-            id: user.id,
-            name: user.name,
-            email: user.email,
-            image: user.image,
-          })
-          .from(user)
-          .where(inArray(user.id, otherIds))
-      : [];
-    const otherMap = new Map(others.map((o) => [o.id, o]));
-    const out = rows.map((r) => {
-      const otherId = r.requesterId === meId ? r.addresseeId : r.requesterId;
-      return {
-        id: r.id,
-        status: r.status,
-        trustLevel: r.trustLevel,
-        createdAt: r.createdAt,
-        acceptedAt: r.acceptedAt,
-        friend: otherMap.get(otherId) ?? null,
-      };
-    });
-    res.json(out);
+    const asAddressee = await db
+      .select(baseSelect)
+      .from(friendships)
+      .innerJoin(user, eq(user.id, friendships.requesterId))
+      .where(
+        and(
+          eq(friendships.status, 'accepted'),
+          eq(friendships.addresseeId, meId),
+        ),
+      );
+    res.json([...asRequester, ...asAddressee]);
   } catch (err) {
     next(err);
   }
