@@ -11,6 +11,21 @@ Feature diferencial: sistema de amigos donde una persona puede crear alarmas en 
 
 > _Repo: `Agenda_Geoloc` · Brand del producto: **GeoAlarm** (icon y splash con la identidad visual)._
 
+## Capturas
+
+<table>
+<tr>
+<td width="50%" valign="top">
+<img src="screenshots/01-alarm-wizard.jpeg" alt="Asistente de alarma con cross-agenda y notify-contact" />
+<p align="center"><em>Asistente de alarma: 3 tipos de disparador (hora / lugar / combinado), selector de destinatario para alarmas cross-agenda (<code>Per a mi</code> o un amigo), botones Call/WhatsApp al dispararse y picker desde la phonebook.</em></p>
+</td>
+<td width="50%" valign="top">
+<img src="screenshots/02-place-picker.jpeg" alt="Creación de lugar con mapa MapLibre, búsqueda y radio configurable" />
+<p align="center"><em>Creación de lugar: mapa MapLibre con búsqueda por dirección, pin arrastrable, radio configurable y color personalizable.</em></p>
+</td>
+</tr>
+</table>
+
 ## Stack
 
 | Capa | Tecnología |
