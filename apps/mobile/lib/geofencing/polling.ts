@@ -193,8 +193,11 @@ export async function cancelConfirmation(alarmId: string): Promise<void> {
  */
 export async function clearAllPolling(): Promise<void> {
   const keys = await AsyncStorage.getAllKeys();
-  const pollingKeys = keys.filter((k) => k.startsWith(POLLING_PREFIX));
-  if (pollingKeys.length > 0) await AsyncStorage.multiRemove(pollingKeys);
+  const toRemove = keys.filter(
+    (k) =>
+      k.startsWith(POLLING_PREFIX) || k.startsWith(PROACTIVE_DIST_PREFIX),
+  );
+  if (toRemove.length > 0) await AsyncStorage.multiRemove(toRemove);
   await AsyncStorage.removeItem(KEEPALIVE_KEY);
   await stopLocationTask();
 }
@@ -221,6 +224,10 @@ type GeofenceCache = {
 const GEOFENCE_CACHE_PREFIX = 'geofence:';
 const PROACTIVE_INNER_RATIO = 0.3;
 const PROACTIVE_INNER_MIN = 25;
+// Cache de la última distancia conocida por alarmId, para detectar
+// transiciones (de fuera a dentro) en lugar de disparar cada vez que estás
+// dentro.
+const PROACTIVE_DIST_PREFIX = 'proactive-lastdist:';
 
 async function readGeofenceCache(alarmId: string): Promise<GeofenceCache | null> {
   try {
@@ -372,9 +379,32 @@ TaskManager.defineTask<LocationTaskData>(POLLING_TASK, async ({ data, error }) =
           PROACTIVE_INNER_MIN,
           Math.round(info.outerRadius * PROACTIVE_INNER_RATIO),
         );
-        const triggerDist = info.event === 'nearby' ? info.outerRadius : innerRadius;
-        if (dist > triggerDist) continue;
+        // El trigger no pot ser més gran que el radi extern. Si l'usuari
+        // configura un radi petit (p.ex. 20m) i l'inner per defecte (25m)
+        // queda més gran, dispararíem fora del cercle real → ho limitem.
+        const triggerDist =
+          info.event === 'nearby'
+            ? info.outerRadius
+            : Math.min(info.outerRadius, innerRadius);
 
+        // Edge-detection: només disparem en transició "fora → dins". Llegim
+        // la última distància coneguda. Si no n'hi havia (primera execució
+        // amb aquesta alarma a la cache), guardem la actual i NO disparem
+        // — així evitem el cas "l'usuari activa l'alarma estant ja dins".
+        const lastDistRaw = await AsyncStorage.getItem(
+          `${PROACTIVE_DIST_PREFIX}${alarmId}`,
+        );
+        const lastDist = lastDistRaw ? Number(lastDistRaw) : null;
+        await AsyncStorage.setItem(
+          `${PROACTIVE_DIST_PREFIX}${alarmId}`,
+          String(Math.round(dist)),
+        );
+
+        if (lastDist === null) continue; // primer update, no decidim
+        if (lastDist <= triggerDist) continue; // ja era dins, no és transició
+        if (dist > triggerDist) continue; // segueix fora
+
+        // Transició fora → dins: dispara
         await fireProactiveNotification(
           alarmId,
           info,
