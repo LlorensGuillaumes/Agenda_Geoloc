@@ -55,10 +55,22 @@ export const GeofenceMap = forwardRef<CameraRef, GeofenceMapProps>(
           style={{ flex: 1 }}
           mapStyle={TILE_STYLE}
           onPress={(e) => {
-            const coords = (e.nativeEvent as { geometry?: { coordinates?: [number, number] } })
-              .geometry?.coordinates;
-            if (!coords || !onPressMap) return;
-            onPressMap({ longitude: coords[0], latitude: coords[1] });
+            // MapLibre RN v11+: las coordenadas del toque vienen en
+            // `nativeEvent.lngLat` (no en `geometry.coordinates` como en v10).
+            const lngLat = (
+              e.nativeEvent as { lngLat?: [number, number] }
+            ).lngLat;
+            if (!lngLat || !onPressMap) return;
+            onPressMap({ longitude: lngLat[0], latitude: lngLat[1] });
+          }}
+          onLongPress={(e) => {
+            // El press-and-hold también permite reposicionar — algunos
+            // usuarios lo esperan por hábito de Google Maps.
+            const lngLat = (
+              e.nativeEvent as { lngLat?: [number, number] }
+            ).lngLat;
+            if (!lngLat || !onPressMap) return;
+            onPressMap({ longitude: lngLat[0], latitude: lngLat[1] });
           }}
           attribution
           logo
