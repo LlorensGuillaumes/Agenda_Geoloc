@@ -149,7 +149,19 @@
     "contactPhonePlaceholder": "+34 612 345 678",
     "actionCall": "Trucar",
     "actionWhatsApp": "WhatsApp",
-    "whatsappMessagePlaceholder": "Missatge predefinit (opcional)"
+    "whatsappMessagePlaceholder": "Missatge predefinit (opcional)",
+    "pickFromContacts": "Triar de l'agenda"
+  },
+  "contacts": {
+    "pickerTitle": "Tria un contacte",
+    "searchPlaceholder": "Cerca per nom o número",
+    "loading": "Carregant contactes…",
+    "permissionDenied": "Necessitem permís per llegir la teva agenda. Pots concedir-lo a la configuració del sistema.",
+    "openSystemSettings": "Obre la configuració del sistema",
+    "tryAgain": "Torna a intentar-ho",
+    "empty": "No tens contactes amb telèfon a l'agenda.",
+    "noResults": "Cap contacte coincideix amb la cerca.",
+    "chooseNumberTitle": "Tria quin número fer servir"
   },
   "places": {
     "empty": "Encara no tens llocs guardats",

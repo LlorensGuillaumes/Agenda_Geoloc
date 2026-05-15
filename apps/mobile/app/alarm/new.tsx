@@ -32,6 +32,7 @@ import { usePlaces, useSharedWithMePlaces } from '@/lib/places/hooks';
 import { useFriends } from '@/lib/friends/hooks';
 import { scheduleAlarmNotification } from '@/lib/notifications';
 import { GeofenceMap, type LatLng } from '@/components/geofence-map';
+import { ContactPickerModal } from '@/components/contact-picker-modal';
 
 type TriggerType = 'time' | 'location' | 'time_and_location';
 type LocationMode = 'saved_place' | 'custom_point';
@@ -228,6 +229,7 @@ export default function NewAlarmScreen() {
   const [whatsappMessage, setWhatsappMessage] = useState('');
   const [actionCall, setActionCall] = useState(true);
   const [actionWhatsApp, setActionWhatsApp] = useState(false);
+  const [contactPickerOpen, setContactPickerOpen] = useState(false);
 
   // Active window (opcional): solo dispara dentro de horario/días
   const [windowEnabled, setWindowEnabled] = useState(false);
@@ -937,8 +939,18 @@ export default function NewAlarmScreen() {
                   placeholder={t('alarms.contactPhonePlaceholder')}
                   placeholderTextColor="#9CA3AF"
                   keyboardType="phone-pad"
-                  className="bg-white border border-gray-300 rounded-lg px-4 py-3 text-base mb-3"
+                  className="bg-white border border-gray-300 rounded-lg px-4 py-3 text-base mb-2"
                 />
+
+                <Pressable
+                  onPress={() => setContactPickerOpen(true)}
+                  className="flex-row items-center justify-center border border-blue-300 rounded-lg py-2 mb-3 active:bg-blue-50"
+                >
+                  <Ionicons name="people-outline" size={18} color="#2563EB" />
+                  <Text className="text-blue-600 font-medium ml-2">
+                    {t('alarms.pickFromContacts')}
+                  </Text>
+                </Pressable>
 
                 <View className="flex-row -mx-1 mb-2">
                   <PillButton
@@ -983,6 +995,15 @@ export default function NewAlarmScreen() {
           </Pressable>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <ContactPickerModal
+        visible={contactPickerOpen}
+        onClose={() => setContactPickerOpen(false)}
+        onPick={({ name, phone }) => {
+          setContactName(name);
+          setContactPhone(phone);
+        }}
+      />
     </SafeAreaView>
   );
 }

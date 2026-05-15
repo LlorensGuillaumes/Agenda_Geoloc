@@ -149,7 +149,19 @@
     "contactPhonePlaceholder": "+34 612 345 678",
     "actionCall": "Call",
     "actionWhatsApp": "WhatsApp",
-    "whatsappMessagePlaceholder": "Predefined message (optional)"
+    "whatsappMessagePlaceholder": "Predefined message (optional)",
+    "pickFromContacts": "Pick from contacts"
+  },
+  "contacts": {
+    "pickerTitle": "Pick a contact",
+    "searchPlaceholder": "Search by name or number",
+    "loading": "Loading contacts…",
+    "permissionDenied": "We need permission to read your contacts. You can grant it in the system settings.",
+    "openSystemSettings": "Open system settings",
+    "tryAgain": "Try again",
+    "empty": "You have no contacts with a phone number.",
+    "noResults": "No contact matches the search.",
+    "chooseNumberTitle": "Choose which number to use"
   },
   "places": {
     "empty": "No saved places yet",

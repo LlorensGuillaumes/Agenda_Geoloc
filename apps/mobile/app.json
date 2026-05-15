@@ -72,6 +72,12 @@
         {
           "color": "#2563EB"
         }
+      ],
+      [
+        "expo-contacts",
+        {
+          "contactsPermission": "Permet a Agenda llegir la teva agenda per triar contactes a qui avisar quan dispari una alarma."
+        }
       ]
     ],
     "experiments": {

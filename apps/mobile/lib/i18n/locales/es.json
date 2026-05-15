@@ -149,7 +149,19 @@
     "contactPhonePlaceholder": "+34 612 345 678",
     "actionCall": "Llamar",
     "actionWhatsApp": "WhatsApp",
-    "whatsappMessagePlaceholder": "Mensaje predefinido (opcional)"
+    "whatsappMessagePlaceholder": "Mensaje predefinido (opcional)",
+    "pickFromContacts": "Elegir de la agenda"
+  },
+  "contacts": {
+    "pickerTitle": "Elige un contacto",
+    "searchPlaceholder": "Busca por nombre o número",
+    "loading": "Cargando contactos…",
+    "permissionDenied": "Necesitamos permiso para leer tu agenda. Puedes concedérlo en los ajustes del sistema.",
+    "openSystemSettings": "Abrir ajustes del sistema",
+    "tryAgain": "Volver a intentar",
+    "empty": "No tienes contactos con teléfono en la agenda.",
+    "noResults": "Ningún contacto coincide con la búsqueda.",
+    "chooseNumberTitle": "Elige qué número usar"
   },
   "places": {
     "empty": "Aún no tienes lugares guardados",
