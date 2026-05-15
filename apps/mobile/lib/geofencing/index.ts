@@ -119,11 +119,18 @@ TaskManager.defineTask<GeofenceTaskData>(GEOFENCE_TASK, async ({ data, error }) 
   // Filtrar por ventana horaria si está definida.
   if (info?.activeWindow && !isInsideActiveWindow(info.activeWindow)) return;
 
-  // Para ENTER preciso: arrancamos polling de confirmación. La notificación
-  // saldrá cuando el polling confirme que el usuario entró al radio interno.
-  // Para EXIT: notificamos al instante con el margen del radio externo
-  // (precisión ~radio configurado, suficiente para detectar "ya he salido").
-  if (isEnter && info) {
+  // Tres caminos según el evento configurado:
+  //
+  // - `event === 'enter'` y entramos: polling de confirmación al radio
+  //   interno (precisión real "estás en el sitio"). La notificación sale
+  //   cuando el polling confirma posición; el markAlarmFired lo dispara
+  //   `polling.ts` al confirmar.
+  // - `event === 'nearby'` y entramos: notificación instantánea al tocar
+  //   el radio externo. No buscamos precisión — la idea es "te aviso al
+  //   pasar cerca", típicamente con radios mayores (200-500m).
+  // - `event === 'exit'` y salimos: notificación instantánea con el margen
+  //   del radio externo.
+  if (isEnter && info && info.event === 'enter') {
     const innerRadius = Math.max(
       INNER_RADIUS_MIN,
       Math.round(info.outerRadius * INNER_RADIUS_RATIO),
@@ -146,17 +153,17 @@ TaskManager.defineTask<GeofenceTaskData>(GEOFENCE_TASK, async ({ data, error }) 
       body: info?.notes ?? '',
       data: {
         alarmId: region.identifier,
-        eventType: isEnter ? 'enter' : 'exit',
+        eventType: isEnter ? (info?.event === 'nearby' ? 'nearby' : 'enter') : 'exit',
       },
       categoryIdentifier: ALARM_CATEGORY,
       sound: 'default',
     },
     trigger: Platform.OS === 'android' ? { channelId: ALARM_CHANNEL_ID } : null,
   });
-  // Para EXIT directo: marcar como fired si es de un solo uso.
-  if (!isEnter) {
-    await markAlarmFired(region.identifier, info?.repeat);
-  }
+  // Para 'nearby' (enter directo) y 'exit' directo: marcar como fired si
+  // es de un solo uso. 'enter' con polling lo hace `polling.ts` al
+  // confirmar la posición precisa.
+  await markAlarmFired(region.identifier, info?.repeat);
 });
 
 export type SyncResult = {
