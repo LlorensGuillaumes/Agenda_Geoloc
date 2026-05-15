@@ -118,6 +118,15 @@ export type LocationConfig = {
   activeWindow?: ActiveWindow;
 };
 
+export type NotifyAction = 'call' | 'whatsapp';
+
+export type NotifyConfig = {
+  contactName?: string;
+  contactPhone?: string;
+  actions: NotifyAction[];
+  whatsappMessage?: string;
+};
+
 export type Alarm = {
   id: string;
   ownerId: string;
@@ -128,6 +137,7 @@ export type Alarm = {
   triggerType: 'time' | 'location' | 'time_and_location';
   timeConfig: TimeConfig | null;
   locationConfig: LocationConfig | null;
+  notifyConfig: NotifyConfig | null;
   status: 'pending_acceptance' | 'active' | 'paused' | 'completed';
   createdAt: string;
   updatedAt: string;
@@ -150,6 +160,7 @@ export type CreateAlarmInput = {
   triggerType: Alarm['triggerType'];
   timeConfig?: TimeConfig;
   locationConfig?: LocationConfig;
+  notifyConfig?: NotifyConfig;
   ownerId?: string;
 };
 
@@ -241,6 +252,7 @@ export const api = {
         isActive: boolean;
         timeConfig: TimeConfig;
         locationConfig: LocationConfig;
+        notifyConfig: NotifyConfig | null;
       }>,
     ) => request<Alarm>(`/api/alarms/${id}`, { method: 'PATCH', token, body: data }),
     remove: (token: string, id: string) =>

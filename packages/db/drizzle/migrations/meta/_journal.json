@@ -8,6 +8,13 @@
       "when": 1778154902570,
       "tag": "0000_panoramic_omega_flight",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1778830655267,
+      "tag": "0001_zippy_leopardon",
+      "breakpoints": true
     }
   ]
 }

@@ -1,0 +1,1 @@
+ALTER TABLE `alarms` ADD `notify_config` text;

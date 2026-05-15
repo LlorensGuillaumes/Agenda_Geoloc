@@ -22,6 +22,8 @@ import {
   ApiError,
   type ActiveWindow,
   type LocationConfig,
+  type NotifyAction,
+  type NotifyConfig,
   type Place,
   type TimeConfig,
 } from '@/lib/api/client';
@@ -219,6 +221,14 @@ export default function NewAlarmScreen() {
   // Por defecto la alarma de lugar es de un solo uso (se desactiva al disparar).
   const [locationRepeat, setLocationRepeat] = useState<'once' | 'always'>('once');
 
+  // Acción al disparar: contacto + botones de llamada/WhatsApp en la notif.
+  const [notifyEnabled, setNotifyEnabled] = useState(false);
+  const [contactName, setContactName] = useState('');
+  const [contactPhone, setContactPhone] = useState('');
+  const [whatsappMessage, setWhatsappMessage] = useState('');
+  const [actionCall, setActionCall] = useState(true);
+  const [actionWhatsApp, setActionWhatsApp] = useState(false);
+
   // Active window (opcional): solo dispara dentro de horario/días
   const [windowEnabled, setWindowEnabled] = useState(false);
   const [windowStart, setWindowStart] = useState(() => {
@@ -339,6 +349,22 @@ export default function NewAlarmScreen() {
         }
       : undefined;
 
+    const notifyActions: NotifyAction[] = [];
+    if (notifyEnabled && actionCall) notifyActions.push('call');
+    if (notifyEnabled && actionWhatsApp) notifyActions.push('whatsapp');
+    const trimmedPhone = contactPhone.trim();
+    const notifyConfig: NotifyConfig | undefined =
+      notifyEnabled && trimmedPhone && notifyActions.length > 0
+        ? {
+            contactName: contactName.trim() || undefined,
+            contactPhone: trimmedPhone,
+            actions: notifyActions,
+            whatsappMessage: actionWhatsApp
+              ? whatsappMessage.trim() || undefined
+              : undefined,
+          }
+        : undefined;
+
     setSubmitting(true);
     try {
       const created = await createAlarm.mutateAsync({
@@ -347,6 +373,7 @@ export default function NewAlarmScreen() {
         triggerType,
         timeConfig,
         locationConfig,
+        notifyConfig,
         ownerId: ownerId ?? undefined,
       });
 
@@ -358,6 +385,7 @@ export default function NewAlarmScreen() {
           title: created.title,
           body: created.notes ?? undefined,
           timeConfig,
+          notifyConfig: created.notifyConfig,
         });
       }
 
@@ -866,6 +894,79 @@ export default function NewAlarmScreen() {
               </View>
             </Section>
           )}
+
+          {/* Avisar un contacte al disparar (call / WhatsApp) */}
+          <Section title={t('alarms.notifyContactSection')}>
+            <Pressable
+              onPress={() => setNotifyEnabled((v) => !v)}
+              className="flex-row items-center justify-between px-1 py-2"
+            >
+              <View className="flex-1 mr-3">
+                <Text className="text-sm font-medium text-gray-700">
+                  {t('alarms.notifyContactLabel')}
+                </Text>
+                <Text className="text-xs text-gray-500 mt-1">
+                  {t('alarms.notifyContactHint')}
+                </Text>
+              </View>
+              <View
+                className={`w-12 h-7 rounded-full justify-center px-1 ${
+                  notifyEnabled ? 'bg-blue-600' : 'bg-gray-300'
+                }`}
+              >
+                <View
+                  className={`w-5 h-5 bg-white rounded-full ${
+                    notifyEnabled ? 'self-end' : 'self-start'
+                  }`}
+                />
+              </View>
+            </Pressable>
+
+            {notifyEnabled && (
+              <View className="mt-2">
+                <TextInput
+                  value={contactName}
+                  onChangeText={setContactName}
+                  placeholder={t('alarms.contactNamePlaceholder')}
+                  placeholderTextColor="#9CA3AF"
+                  className="bg-white border border-gray-300 rounded-lg px-4 py-3 text-base mb-2"
+                />
+                <TextInput
+                  value={contactPhone}
+                  onChangeText={setContactPhone}
+                  placeholder={t('alarms.contactPhonePlaceholder')}
+                  placeholderTextColor="#9CA3AF"
+                  keyboardType="phone-pad"
+                  className="bg-white border border-gray-300 rounded-lg px-4 py-3 text-base mb-3"
+                />
+
+                <View className="flex-row -mx-1 mb-2">
+                  <PillButton
+                    selected={actionCall}
+                    label={t('alarms.actionCall')}
+                    onPress={() => setActionCall((v) => !v)}
+                  />
+                  <PillButton
+                    selected={actionWhatsApp}
+                    label={t('alarms.actionWhatsApp')}
+                    onPress={() => setActionWhatsApp((v) => !v)}
+                  />
+                </View>
+
+                {actionWhatsApp && (
+                  <TextInput
+                    value={whatsappMessage}
+                    onChangeText={setWhatsappMessage}
+                    placeholder={t('alarms.whatsappMessagePlaceholder')}
+                    placeholderTextColor="#9CA3AF"
+                    multiline
+                    className="bg-white border border-gray-300 rounded-lg px-4 py-3 text-base"
+                    style={{ minHeight: 60, textAlignVertical: 'top' }}
+                  />
+                )}
+              </View>
+            )}
+          </Section>
 
           <Pressable
             onPress={handleSubmit}

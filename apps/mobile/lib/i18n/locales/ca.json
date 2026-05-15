@@ -141,7 +141,15 @@
     "acceptedToast": "Alarma acceptada",
     "rejectedToast": "Alarma rebutjada",
     "deletedToast": "Alarma eliminada",
-    "withdrawnToast": "Alarma retirada"
+    "withdrawnToast": "Alarma retirada",
+    "notifyContactSection": "Avisar un contacte",
+    "notifyContactLabel": "Botons d'acció a la notificació",
+    "notifyContactHint": "Quan dispari l'alarma, la notificació tindrà botons per trucar o enviar WhatsApp al contacte d'un sol toc.",
+    "contactNamePlaceholder": "Nom (opcional)",
+    "contactPhonePlaceholder": "+34 612 345 678",
+    "actionCall": "Trucar",
+    "actionWhatsApp": "WhatsApp",
+    "whatsappMessagePlaceholder": "Missatge predefinit (opcional)"
   },
   "places": {
     "empty": "Encara no tens llocs guardats",

@@ -136,6 +136,7 @@ export const alarms = sqliteTable('alarms', {
   }).notNull(),
   timeConfig: text('time_config', { mode: 'json' }).$type<TimeConfig | null>(),
   locationConfig: text('location_config', { mode: 'json' }).$type<LocationConfig | null>(),
+  notifyConfig: text('notify_config', { mode: 'json' }).$type<NotifyConfig | null>(),
   status: text('status', {
     enum: ['pending_acceptance', 'active', 'paused', 'completed'],
   })
@@ -172,6 +173,17 @@ export type LocationConfig = {
     end: string; // "HH:MM"
     weekdays?: number[]; // 0=domingo, 6=sábado
   };
+};
+
+// Acciones extra que se ofrecen al usuario cuando la alarma dispara. La
+// notificación incluye botones que abren el dialer o WhatsApp con un
+// contacto preconfigurado, para flujos como "cuando llegue a casa
+// recuérdame llamar a mi pareja".
+export type NotifyConfig = {
+  contactName?: string;
+  contactPhone?: string; // E.164 preferido (p.ej. +34612345678)
+  actions: Array<'call' | 'whatsapp'>;
+  whatsappMessage?: string; // texto opcional prellenado para wa.me
 };
 
 // ============================================================

@@ -118,6 +118,7 @@ router.post('/', async (req, res, next) => {
         triggerType: data.triggerType,
         timeConfig: data.timeConfig ?? null,
         locationConfig: data.locationConfig ?? null,
+        notifyConfig: data.notifyConfig ?? null,
         ownerId: targetOwnerId,
         creatorId,
         status,

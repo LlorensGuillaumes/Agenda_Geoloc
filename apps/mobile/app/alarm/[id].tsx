@@ -317,6 +317,21 @@ export default function AlarmDetailScreen() {
                   )}
               </>
             )}
+            {alarm.notifyConfig && alarm.notifyConfig.actions.length > 0 && (
+              <InfoRow
+                label={t('alarms.notifyContactSection')}
+                value={[
+                  alarm.notifyConfig.contactName || alarm.notifyConfig.contactPhone || '',
+                  alarm.notifyConfig.actions
+                    .map((a) =>
+                      a === 'call' ? t('alarms.actionCall') : t('alarms.actionWhatsApp'),
+                    )
+                    .join(' · '),
+                ]
+                  .filter(Boolean)
+                  .join(' — ')}
+              />
+            )}
           </View>
         </View>
 

@@ -1,11 +1,32 @@
-import { Platform } from 'react-native';
+import { Linking, Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import type { TimeConfig } from '../api/client';
+import type { NotifyConfig, TimeConfig } from '../api/client';
 
 const NOTIF_PREFIX = 'alarm-notif:';
 export const ALARM_CATEGORY = 'alarm';
+export const ALARM_ACTIONS_CATEGORY = 'alarm_actions';
 export const ALARM_CHANNEL_ID = 'alarms';
+
+function sanitizePhone(phone: string): string {
+  // Quita espacios, guiones, paréntesis. Mantiene `+` líder.
+  return phone.replace(/[^\d+]/g, '');
+}
+
+function pickCategory(notifyConfig?: NotifyConfig | null): string {
+  const hasActions = (notifyConfig?.actions?.length ?? 0) > 0;
+  return hasActions ? ALARM_ACTIONS_CATEGORY : ALARM_CATEGORY;
+}
+
+export function buildContactData(notifyConfig?: NotifyConfig | null) {
+  if (!notifyConfig) return undefined;
+  return {
+    contactName: notifyConfig.contactName,
+    contactPhone: notifyConfig.contactPhone,
+    whatsappMessage: notifyConfig.whatsappMessage,
+    actions: notifyConfig.actions,
+  };
+}
 
 // Cómo se muestra una notificación cuando llega con la app en foreground.
 Notifications.setNotificationHandler({
@@ -32,7 +53,7 @@ if (Platform.OS === 'android') {
   });
 }
 
-// Categoría con botones de posponer 5/10/15 min.
+// Categoría por defecto: 3 botones de snooze.
 Notifications.setNotificationCategoryAsync(ALARM_CATEGORY, [
   { identifier: 'snooze_5', buttonTitle: '+5 min', options: { opensAppToForeground: false } },
   { identifier: 'snooze_10', buttonTitle: '+10 min', options: { opensAppToForeground: false } },
@@ -41,26 +62,58 @@ Notifications.setNotificationCategoryAsync(ALARM_CATEGORY, [
   // ignore: en Expo Go puede fallar
 });
 
+// Categoría con acciones de contacto. Android limita a 3 botones por
+// notificación así que aquí sacrificamos snooze a favor de las acciones
+// directas (llamada y WhatsApp). Para alarmas "llámame al llegar" tiene
+// más sentido el atajo que el posponer.
+Notifications.setNotificationCategoryAsync(ALARM_ACTIONS_CATEGORY, [
+  { identifier: 'call', buttonTitle: 'Trucar', options: { opensAppToForeground: true } },
+  { identifier: 'whatsapp', buttonTitle: 'WhatsApp', options: { opensAppToForeground: true } },
+]).catch(() => {
+  // ignore
+});
+
 // Listener global de respuestas. Funciona aunque la app esté en background.
 Notifications.addNotificationResponseReceivedListener(async (response) => {
   const actionId = response.actionIdentifier;
-  if (!actionId.startsWith('snooze_')) return;
-  const minutes = actionId === 'snooze_5' ? 5 : actionId === 'snooze_10' ? 10 : 15;
   const { content } = response.notification.request;
-  await Notifications.scheduleNotificationAsync({
-    content: {
-      title: content.title ?? 'Alarma',
-      body: content.body ?? '',
-      data: { ...(content.data ?? {}), snoozedFromAlarmId: content.data?.alarmId },
-      categoryIdentifier: ALARM_CATEGORY,
-      sound: 'default',
-    },
-    trigger: {
-      type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
-      seconds: minutes * 60,
-      channelId: Platform.OS === 'android' ? ALARM_CHANNEL_ID : undefined,
-    } as Notifications.NotificationTriggerInput,
-  });
+  const data = (content.data ?? {}) as Record<string, unknown>;
+
+  if (actionId === 'call') {
+    const phone = typeof data.contactPhone === 'string' ? data.contactPhone : '';
+    if (phone) Linking.openURL(`tel:${sanitizePhone(phone)}`).catch(() => {});
+    return;
+  }
+
+  if (actionId === 'whatsapp') {
+    const phone = typeof data.contactPhone === 'string' ? data.contactPhone : '';
+    if (!phone) return;
+    const cleaned = sanitizePhone(phone).replace(/^\+/, '');
+    const msg = typeof data.whatsappMessage === 'string' ? data.whatsappMessage : '';
+    const url = msg
+      ? `https://wa.me/${cleaned}?text=${encodeURIComponent(msg)}`
+      : `https://wa.me/${cleaned}`;
+    Linking.openURL(url).catch(() => {});
+    return;
+  }
+
+  if (actionId.startsWith('snooze_')) {
+    const minutes = actionId === 'snooze_5' ? 5 : actionId === 'snooze_10' ? 10 : 15;
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: content.title ?? 'Alarma',
+        body: content.body ?? '',
+        data: { ...data, snoozedFromAlarmId: data.alarmId },
+        categoryIdentifier: content.categoryIdentifier ?? ALARM_CATEGORY,
+        sound: 'default',
+      },
+      trigger: {
+        type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+        seconds: minutes * 60,
+        channelId: Platform.OS === 'android' ? ALARM_CHANNEL_ID : undefined,
+      } as Notifications.NotificationTriggerInput,
+    });
+  }
 });
 
 export async function ensureNotificationPermission(): Promise<boolean> {
@@ -90,6 +143,7 @@ export async function scheduleAlarmNotification(args: {
   title: string;
   body?: string;
   timeConfig: TimeConfig;
+  notifyConfig?: NotifyConfig | null;
 }): Promise<string[]> {
   const granted = await ensureNotificationPermission();
   if (!granted) return [];
@@ -98,12 +152,13 @@ export async function scheduleAlarmNotification(args: {
   await cancelAlarmNotificationByAlarmId(args.alarmId);
 
   const ids: string[] = [];
-  const { timeConfig } = args;
+  const { timeConfig, notifyConfig } = args;
+  const contactData = buildContactData(notifyConfig);
   const content = {
     title: args.title,
     body: args.body ?? '',
-    data: { alarmId: args.alarmId },
-    categoryIdentifier: ALARM_CATEGORY,
+    data: { alarmId: args.alarmId, ...(contactData ?? {}) },
+    categoryIdentifier: pickCategory(notifyConfig),
     sound: 'default' as const,
   };
 

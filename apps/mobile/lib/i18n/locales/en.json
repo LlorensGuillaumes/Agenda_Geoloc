@@ -141,7 +141,15 @@
     "acceptedToast": "Alarm accepted",
     "rejectedToast": "Alarm rejected",
     "deletedToast": "Alarm deleted",
-    "withdrawnToast": "Alarm withdrawn"
+    "withdrawnToast": "Alarm withdrawn",
+    "notifyContactSection": "Notify a contact",
+    "notifyContactLabel": "Action buttons on the notification",
+    "notifyContactHint": "When the alarm fires, the notification will include buttons to call or message the contact in one tap.",
+    "contactNamePlaceholder": "Name (optional)",
+    "contactPhonePlaceholder": "+34 612 345 678",
+    "actionCall": "Call",
+    "actionWhatsApp": "WhatsApp",
+    "whatsappMessagePlaceholder": "Predefined message (optional)"
   },
   "places": {
     "empty": "No saved places yet",

@@ -22,7 +22,13 @@ import * as TaskManager from 'expo-task-manager';
 import * as Location from 'expo-location';
 import * as Notifications from 'expo-notifications';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { ALARM_CATEGORY, ALARM_CHANNEL_ID } from '../notifications';
+import type { NotifyConfig } from '../api/client';
+import {
+  ALARM_ACTIONS_CATEGORY,
+  ALARM_CATEGORY,
+  ALARM_CHANNEL_ID,
+  buildContactData,
+} from '../notifications';
 
 export const POLLING_TASK = 'agenda.location-polling-task';
 const POLLING_PREFIX = 'polling:';
@@ -42,6 +48,7 @@ export type PollingEntry = {
   title: string;
   notes: string | null;
   startedAt: number;
+  notifyConfig?: NotifyConfig | null;
 };
 
 function distanceMeters(a: LatLng, b: LatLng): number {
@@ -213,6 +220,8 @@ TaskManager.defineTask<LocationTaskData>(POLLING_TASK, async ({ data, error }) =
       longitude: entry.centerLng,
     });
     if (dist <= entry.innerRadius) {
+      const contactData = buildContactData(entry.notifyConfig);
+      const hasActions = (entry.notifyConfig?.actions?.length ?? 0) > 0;
       await Notifications.scheduleNotificationAsync({
         content: {
           title: entry.title,
@@ -221,8 +230,9 @@ TaskManager.defineTask<LocationTaskData>(POLLING_TASK, async ({ data, error }) =
             alarmId: entry.alarmId,
             eventType: 'enter',
             confirmed: true,
+            ...(contactData ?? {}),
           },
-          categoryIdentifier: ALARM_CATEGORY,
+          categoryIdentifier: hasActions ? ALARM_ACTIONS_CATEGORY : ALARM_CATEGORY,
           sound: 'default',
         },
         trigger: Platform.OS === 'android' ? { channelId: ALARM_CHANNEL_ID } : null,

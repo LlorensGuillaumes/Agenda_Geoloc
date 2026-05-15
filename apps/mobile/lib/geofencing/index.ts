@@ -3,7 +3,7 @@ import * as TaskManager from 'expo-task-manager';
 import * as Location from 'expo-location';
 import * as Notifications from 'expo-notifications';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import type { Alarm, Place } from '../api/client';
+import type { Alarm, NotifyConfig, Place } from '../api/client';
 import {
   cancelConfirmation,
   clearAllPolling,
@@ -16,7 +16,12 @@ import {
   markAlarmFired,
   reconcileFiredFlags,
 } from './fired';
-import { ALARM_CATEGORY, ALARM_CHANNEL_ID } from '../notifications';
+import {
+  ALARM_ACTIONS_CATEGORY,
+  ALARM_CATEGORY,
+  ALARM_CHANNEL_ID,
+  buildContactData,
+} from '../notifications';
 
 export const GEOFENCE_TASK = 'agenda.geofence-task';
 const CACHE_PREFIX = 'geofence:';
@@ -43,6 +48,7 @@ type CachedAlarmInfo = {
     end: string; // "HH:MM"
     weekdays?: number[]; // 0=domingo, 6=sábado
   };
+  notifyConfig?: NotifyConfig | null;
 };
 
 /**
@@ -143,10 +149,13 @@ TaskManager.defineTask<GeofenceTaskData>(GEOFENCE_TASK, async ({ data, error }) 
       event: info.event,
       title: info.title,
       notes: info.notes,
+      notifyConfig: info.notifyConfig ?? null,
     });
     return;
   }
 
+  const contactData = buildContactData(info?.notifyConfig);
+  const hasActions = (info?.notifyConfig?.actions?.length ?? 0) > 0;
   await Notifications.scheduleNotificationAsync({
     content: {
       title: info?.title ?? 'Alarma',
@@ -154,8 +163,9 @@ TaskManager.defineTask<GeofenceTaskData>(GEOFENCE_TASK, async ({ data, error }) 
       data: {
         alarmId: region.identifier,
         eventType: isEnter ? (info?.event === 'nearby' ? 'nearby' : 'enter') : 'exit',
+        ...(contactData ?? {}),
       },
-      categoryIdentifier: ALARM_CATEGORY,
+      categoryIdentifier: hasActions ? ALARM_ACTIONS_CATEGORY : ALARM_CATEGORY,
       sound: 'default',
     },
     trigger: Platform.OS === 'android' ? { channelId: ALARM_CHANNEL_ID } : null,
@@ -247,6 +257,7 @@ export async function syncGeofences(input: {
         outerRadius: radius,
         repeat: cfg.repeat,
         activeWindow: cfg.activeWindow,
+        notifyConfig: alarm.notifyConfig,
       },
     });
   }

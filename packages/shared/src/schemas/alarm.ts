@@ -22,6 +22,22 @@ export const activeWindowSchema = z.object({
   weekdays: z.array(z.number().int().min(0).max(6)).optional(),
 });
 
+export const notifyActionSchema = z.enum(['call', 'whatsapp']);
+
+export const notifyConfigSchema = z
+  .object({
+    contactName: z.string().max(100).optional(),
+    // Acceptem qualsevol string raonable; al client ho passem per un netejat
+    // mínim (treure espais, guions) abans d'usar-ho a tel: o wa.me.
+    contactPhone: z.string().min(3).max(30).optional(),
+    actions: z.array(notifyActionSchema).max(2),
+    whatsappMessage: z.string().max(500).optional(),
+  })
+  .refine(
+    (cfg) => cfg.actions.length === 0 || !!cfg.contactPhone,
+    { message: 'contactPhone es necesario si se especifica alguna acción' },
+  );
+
 export const locationRepeatSchema = z.enum(['once', 'always']);
 
 export const locationConfigSchema = z.object({
@@ -53,6 +69,7 @@ export const createAlarmSchema = z
     triggerType: triggerTypeSchema,
     timeConfig: timeConfigSchema.optional(),
     locationConfig: locationConfigSchema.optional(),
+    notifyConfig: notifyConfigSchema.optional(),
     // ownerId viene de Better-Auth (formato propio, no UUID v4 estándar).
     ownerId: z.string().min(1).optional(),
   })
@@ -81,9 +98,12 @@ export const updateAlarmSchema = z.object({
   isActive: z.boolean().optional(),
   timeConfig: timeConfigSchema.optional(),
   locationConfig: locationConfigSchema.optional(),
+  notifyConfig: notifyConfigSchema.nullable().optional(),
 });
 
 export type CreateAlarmInput = z.infer<typeof createAlarmSchema>;
 export type UpdateAlarmInput = z.infer<typeof updateAlarmSchema>;
 export type TimeConfigInput = z.infer<typeof timeConfigSchema>;
 export type LocationConfigInput = z.infer<typeof locationConfigSchema>;
+export type NotifyConfigInput = z.infer<typeof notifyConfigSchema>;
+export type NotifyAction = z.infer<typeof notifyActionSchema>;
