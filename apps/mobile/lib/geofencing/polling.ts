@@ -110,8 +110,12 @@ async function startLocationTask(notificationBody: string): Promise<void> {
   if (running) return;
   await Location.startLocationUpdatesAsync(POLLING_TASK, {
     accuracy: Location.Accuracy.Balanced,
+    // `timeInterval`: máximo cada 30s parado. `distanceInterval: 100` pide
+    // un update extra cada 100m recorridos; a 120 km/h eso son ~3s, así que
+    // recibimos updates muy frecuentes en carretera sin gastar batería
+    // cuando estamos parados.
     timeInterval: LOCATION_INTERVAL_MS,
-    distanceInterval: 0,
+    distanceInterval: 100,
     showsBackgroundLocationIndicator: false,
     pausesUpdatesAutomatically: false,
     foregroundService: {
@@ -195,6 +199,79 @@ export async function clearAllPolling(): Promise<void> {
   await stopLocationTask();
 }
 
+// Cache de geofence guardado por `syncGeofences` para cada alarma. Definimos
+// el tipo aquí para no importar de `./index.ts` (causaría ciclo). Debe
+// coincidir con `CachedAlarmInfo` de index.ts.
+type GeofenceCache = {
+  title: string;
+  notes: string | null;
+  event: 'enter' | 'exit' | 'nearby';
+  centerLat: number;
+  centerLng: number;
+  outerRadius: number;
+  repeat?: 'once' | 'always';
+  activeWindow?: {
+    start: string;
+    end: string;
+    weekdays?: number[];
+  };
+  notifyConfig?: NotifyConfig | null;
+};
+
+const GEOFENCE_CACHE_PREFIX = 'geofence:';
+const PROACTIVE_INNER_RATIO = 0.3;
+const PROACTIVE_INNER_MIN = 25;
+
+async function readGeofenceCache(alarmId: string): Promise<GeofenceCache | null> {
+  try {
+    const raw = await AsyncStorage.getItem(`${GEOFENCE_CACHE_PREFIX}${alarmId}`);
+    return raw ? (JSON.parse(raw) as GeofenceCache) : null;
+  } catch {
+    return null;
+  }
+}
+
+function isInsideActiveWindow(
+  window: NonNullable<GeofenceCache['activeWindow']>,
+  now: Date = new Date(),
+): boolean {
+  if (window.weekdays && window.weekdays.length > 0) {
+    if (!window.weekdays.includes(now.getDay())) return false;
+  }
+  const [sh, sm] = window.start.split(':').map(Number);
+  const [eh, em] = window.end.split(':').map(Number);
+  const cur = now.getHours() * 60 + now.getMinutes();
+  const start = sh * 60 + sm;
+  const end = eh * 60 + em;
+  if (start === end) return false;
+  if (start < end) return cur >= start && cur < end;
+  return cur >= start || cur < end;
+}
+
+async function fireProactiveNotification(
+  alarmId: string,
+  info: GeofenceCache,
+  eventType: 'nearby' | 'enter',
+): Promise<void> {
+  const contactData = buildContactData(info.notifyConfig);
+  const hasActions = (info.notifyConfig?.actions?.length ?? 0) > 0;
+  await Notifications.scheduleNotificationAsync({
+    content: {
+      title: info.title,
+      body: info.notes ?? '',
+      data: {
+        alarmId,
+        eventType,
+        proactive: true,
+        ...(contactData ?? {}),
+      },
+      categoryIdentifier: hasActions ? ALARM_ACTIONS_CATEGORY : ALARM_CATEGORY,
+      sound: 'default',
+    },
+    trigger: Platform.OS === 'android' ? { channelId: ALARM_CHANNEL_ID } : null,
+  });
+}
+
 type LocationTaskData = { locations: Location.LocationObject[] };
 
 TaskManager.defineTask<LocationTaskData>(POLLING_TASK, async ({ data, error }) => {
@@ -245,6 +322,65 @@ TaskManager.defineTask<LocationTaskData>(POLLING_TASK, async ({ data, error }) =
         await mod.markAlarmFiredIfOnce(entry.alarmId);
       } catch {
         // ignore
+      }
+    }
+  }
+
+  // Detección proactiva: el geofence nativo de Android es muy lento a alta
+  // velocidad (puede no detectar un cruce de 200m a 120 km/h). Aprovechamos
+  // los location updates que ya recibimos para comprobar nosotros mismos la
+  // distancia a cada geofence "nearby" o "enter" activo y disparar antes.
+  //
+  // Reglas:
+  // - 'nearby': dispara si dist <= outerRadius
+  // - 'enter':  dispara si dist <= innerRadius (mismo cálculo que index.ts)
+  // - 'exit':   no nos metemos — el exit nativo ya es fiable
+  // - Solo aplicamos a repeat='once' para evitar duplicados consecutivos en
+  //   'always' (esos siguen vía GMS, que ya hace dedupe por estado interno).
+  // - Si hay un polling de confirmación activo para el alarmId (event='enter'),
+  //   no duplicamos — el polling ya está procesado arriba.
+  const keepaliveIds = await readKeepaliveIds();
+  if (keepaliveIds.length > 0) {
+    let firedMod: typeof import('./fired') | null = null;
+    try {
+      firedMod = await import('./fired');
+    } catch {
+      // Si no podemos cargar el módulo `fired`, mejor no disparar
+      // proactivamente — el flag local es clave para evitar duplicados.
+      firedMod = null;
+    }
+    if (firedMod) {
+      for (const alarmId of keepaliveIds) {
+        if (await firedMod.isAlarmFired(alarmId)) continue;
+        const info = await readGeofenceCache(alarmId);
+        if (!info) continue;
+        if (info.event === 'exit') continue;
+        if (info.repeat === 'always') continue;
+        // Si hay polling de confirmación en curso para este alarm, no dispares
+        // a la vez — el polling lo cubre cuando confirme.
+        const pollingActive = await AsyncStorage.getItem(
+          `${POLLING_PREFIX}${alarmId}`,
+        );
+        if (pollingActive) continue;
+        if (info.activeWindow && !isInsideActiveWindow(info.activeWindow)) continue;
+
+        const dist = distanceMeters(cur, {
+          latitude: info.centerLat,
+          longitude: info.centerLng,
+        });
+        const innerRadius = Math.max(
+          PROACTIVE_INNER_MIN,
+          Math.round(info.outerRadius * PROACTIVE_INNER_RATIO),
+        );
+        const triggerDist = info.event === 'nearby' ? info.outerRadius : innerRadius;
+        if (dist > triggerDist) continue;
+
+        await fireProactiveNotification(
+          alarmId,
+          info,
+          info.event === 'nearby' ? 'nearby' : 'enter',
+        );
+        await firedMod.markAlarmFired(alarmId, info.repeat);
       }
     }
   }

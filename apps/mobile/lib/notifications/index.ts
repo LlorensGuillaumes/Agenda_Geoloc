@@ -38,16 +38,32 @@ Notifications.setNotificationHandler({
   }),
 });
 
-// Canal Android con prioridad MAX, sonido y vibración. En iOS no aplica.
+// Canal Android con prioridad MAX, sonido y vibración estilo alarma.
+// - bypassDnd: true → suena aunque el móvil esté en "No molestar"
+// - patrón de vibración largo (~5s) para que sea evidente
+// - importance MAX + lockscreenVisibility PUBLIC → heads-up notif que cubre
+//   la pantalla bloqueada
+//
+// Para un ringtone personalizado de alarma:
+//  1. Coloca el MP3/OGG en `apps/mobile/assets/sounds/alarm.mp3`
+//  2. Añade `"sounds": ["./assets/sounds/alarm.mp3"]` al plugin
+//     `expo-notifications` de app.json
+//  3. Cambia `sound: 'default'` por `sound: 'alarm.mp3'` aquí
+//  4. Rebuild EAS (es asset nativo, no OTA)
+//
+// Nota: si el usuario ya tenía el canal creado con la versión anterior y
+// ha tocado manualmente la configuración del canal en Ajustes de Android,
+// estos cambios pueden no aplicarse — Android prioriza la elección del
+// usuario. En ese caso, hay que reinstalar o resetear el canal a mano.
 if (Platform.OS === 'android') {
   Notifications.setNotificationChannelAsync(ALARM_CHANNEL_ID, {
     name: 'Alarmas',
     importance: Notifications.AndroidImportance.MAX,
-    vibrationPattern: [0, 400, 200, 400],
+    vibrationPattern: [0, 600, 300, 600, 300, 600, 300, 600],
     sound: 'default',
     enableVibrate: true,
     lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
-    bypassDnd: false,
+    bypassDnd: true,
   }).catch(() => {
     // ignore: en Expo Go o si los permisos no están dados aún
   });
