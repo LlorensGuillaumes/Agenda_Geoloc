@@ -236,7 +236,12 @@ export default function NewAlarmScreen() {
   // no fem scroll. Cridem scrollToEnd amb un petit delay perquè el layout
   // s'estabilitzi després que el teclat es mostri.
   const handleContactFieldFocus = () => {
-    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 150);
+    // Esperem que el teclat estigui completament obert abans d'ajustar el
+    // scroll. Dos toques: primer immediat (per moviments suaus), després al
+    // 350ms quan el teclat ja ocupa tot el seu espai i el layout s'ha
+    // estabilitzat.
+    scrollRef.current?.scrollToEnd({ animated: true });
+    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 350);
   };
 
   // Active window (opcional): solo dispara dentro de horario/días
@@ -417,14 +422,16 @@ export default function NewAlarmScreen() {
     <SafeAreaView className="flex-1 bg-gray-50" edges={['bottom']}>
       <Stack.Screen options={{ title: t('alarms.newTitle'), headerShown: true }} />
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
         className="flex-1"
       >
         <ScrollView
           ref={scrollRef}
           className="flex-1"
-          contentContainerStyle={{ padding: 16, paddingBottom: 200 }}
+          contentContainerStyle={{ padding: 16, paddingBottom: 500 }}
           keyboardShouldPersistTaps="handled"
+          automaticallyAdjustKeyboardInsets
         >
           {/* Title + notes */}
           <Section title={t('alarms.detailsSection')}>
