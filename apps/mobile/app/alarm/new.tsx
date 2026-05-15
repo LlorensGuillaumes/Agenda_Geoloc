@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -230,6 +230,14 @@ export default function NewAlarmScreen() {
   const [actionCall, setActionCall] = useState(true);
   const [actionWhatsApp, setActionWhatsApp] = useState(false);
   const [contactPickerOpen, setContactPickerOpen] = useState(false);
+  const scrollRef = useRef<ScrollView>(null);
+  // El bloc "Avisar un contacte" està al fons del ScrollView. Quan el teclat
+  // s'obre per als camps de nom/telèfon/missatge, els camps queden tapats si
+  // no fem scroll. Cridem scrollToEnd amb un petit delay perquè el layout
+  // s'estabilitzi després que el teclat es mostri.
+  const handleContactFieldFocus = () => {
+    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 150);
+  };
 
   // Active window (opcional): solo dispara dentro de horario/días
   const [windowEnabled, setWindowEnabled] = useState(false);
@@ -413,8 +421,9 @@ export default function NewAlarmScreen() {
         className="flex-1"
       >
         <ScrollView
+          ref={scrollRef}
           className="flex-1"
-          contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
+          contentContainerStyle={{ padding: 16, paddingBottom: 200 }}
           keyboardShouldPersistTaps="handled"
         >
           {/* Title + notes */}
@@ -934,6 +943,7 @@ export default function NewAlarmScreen() {
                 <TextInput
                   value={contactName}
                   onChangeText={setContactName}
+                  onFocus={handleContactFieldFocus}
                   placeholder={t('alarms.contactNamePlaceholder')}
                   placeholderTextColor="#9CA3AF"
                   className="bg-white border border-gray-300 rounded-lg px-4 py-3 text-base mb-2"
@@ -941,6 +951,7 @@ export default function NewAlarmScreen() {
                 <TextInput
                   value={contactPhone}
                   onChangeText={setContactPhone}
+                  onFocus={handleContactFieldFocus}
                   placeholder={t('alarms.contactPhonePlaceholder')}
                   placeholderTextColor="#9CA3AF"
                   keyboardType="phone-pad"
@@ -974,6 +985,7 @@ export default function NewAlarmScreen() {
                   <TextInput
                     value={whatsappMessage}
                     onChangeText={setWhatsappMessage}
+                    onFocus={handleContactFieldFocus}
                     placeholder={t('alarms.whatsappMessagePlaceholder')}
                     placeholderTextColor="#9CA3AF"
                     multiline
