@@ -320,6 +320,11 @@ export default function PlaceDetailScreen() {
             maximumTrackTintColor="#E5E7EB"
             thumbTintColor="#2563EB"
           />
+          {radius < 100 && (
+            <Text className="text-xs text-amber-700 mt-1 leading-4">
+              {t('places.smallRadiusWarning')}
+            </Text>
+          )}
 
           <Text className="text-sm font-medium text-gray-700 mt-4 mb-2">
             {t('places.color')}

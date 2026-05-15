@@ -729,6 +729,11 @@ export default function NewAlarmScreen() {
                     maximumTrackTintColor="#E5E7EB"
                     thumbTintColor="#2563EB"
                   />
+                  {customRadius < 100 && (
+                    <Text className="text-xs text-amber-700 mt-1 leading-4">
+                      {t('places.smallRadiusWarning')}
+                    </Text>
+                  )}
                 </View>
               )}
 

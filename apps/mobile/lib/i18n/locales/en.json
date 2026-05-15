@@ -187,6 +187,7 @@
     "searchPlaceholder": "Street, city, postcode…",
     "searchNoResults": "No address found.",
     "searchError": "Could not look up the address.",
+    "smallRadiusWarning": "⚠ Radii under 100m may be delayed (up to minutes) or miss fast crossings. Limitation of the Android system.",
     "sharedWith": "Shared with",
     "sharedWithHint": "Friends with access can create alarms on your agenda that reference this place. They never see your location.",
     "shareEmpty": "Not shared with anyone yet.",

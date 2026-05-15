@@ -187,6 +187,7 @@
     "searchPlaceholder": "Calle, ciudad, código postal…",
     "searchNoResults": "No se ha encontrado esa dirección.",
     "searchError": "No se ha podido buscar la dirección.",
+    "smallRadiusWarning": "⚠ Radios menores de 100m pueden tener retrasos (hasta minutos) o no disparar en movimiento rápido. Limitación del sistema Android.",
     "sharedWith": "Compartido con",
     "sharedWithHint": "Los amigos con acceso pueden crear alarmas en tu agenda referenciando este lugar. Nunca ven tu ubicación.",
     "shareEmpty": "Todavía no lo has compartido con nadie.",

@@ -187,6 +187,7 @@
     "searchPlaceholder": "Carrer, ciutat, codi postal…",
     "searchNoResults": "No s'ha trobat aquesta adreça.",
     "searchError": "No s'ha pogut cercar l'adreça.",
+    "smallRadiusWarning": "⚠ Radis menors de 100m poden tenir retards (fins a minuts) o no disparar en moviment ràpid. Limitació del sistema Android.",
     "sharedWith": "Compartit amb",
     "sharedWithHint": "Els amics amb accés poden crear alarmes a la teva agenda referenciant aquest lloc. Mai no veuen la teva ubicació.",
     "shareEmpty": "Encara no compartit amb ningú.",
