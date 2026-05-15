@@ -94,8 +94,21 @@ function AddFriend() {
         Alert.alert(t('common.error'), t('friends.alreadyExists'));
         setFound(null);
         setEmail('');
+      } else if (err instanceof ApiError) {
+        const payload = err.payload as { error?: string } | null;
+        Alert.alert(
+          t('common.error'),
+          `${t('friends.sendError')}\nHTTP ${err.status}${
+            payload?.error ? ` · ${payload.error}` : ''
+          }`,
+        );
       } else {
-        Alert.alert(t('common.error'), t('friends.sendError'));
+        Alert.alert(
+          t('common.error'),
+          `${t('friends.sendError')}\n${
+            err instanceof Error ? err.message : 'Unknown'
+          }`,
+        );
       }
     }
   };
