@@ -1,4 +1,4 @@
-# Agenda_Geoloc
+# GeoAlarm
 
 App móvil de agenda con dos tipos de disparador:
 
@@ -9,6 +9,8 @@ App móvil de agenda con dos tipos de disparador:
 
 Feature diferencial: sistema de amigos donde una persona puede crear alarmas en la agenda de otra (ej: tu pareja te añade "compra leche cuando llegues al Mercadona"). La ubicación nunca se comparte; solo la definición de la alarma.
 
+> _Repo: `Agenda_Geoloc` · Brand del producto: **GeoAlarm** (icon y splash con la identidad visual)._
+
 ## Stack
 
 | Capa | Tecnología |
@@ -17,11 +19,11 @@ Feature diferencial: sistema de amigos donde una persona puede crear alarmas en 
 | State | Zustand (auth) + React Query (server cache) + SecureStore (token) |
 | Forms | react-hook-form + zod resolver |
 | Mapas | react-native-maps + expo-location |
-| Notifs | expo-notifications (locales en Fase 3, geofence triggers en Fase 4) |
+| Notifs | expo-notifications (locales + geofence) + push remotas (friend requests, cross-agenda alarms) |
 | Backend | Node 20 + Express + Better-Auth + Drizzle ORM + Zod |
 | DB | Turso (libSQL/SQLite serverless) |
 | Repo | pnpm workspaces + TypeScript |
-| Hosting | Render (api), local APK (mobile dev) |
+| Hosting | Render (api), EAS Build cloud (APK preview + AAB production) |
 
 ## Estructura
 
@@ -42,7 +44,7 @@ packages/
 - Node 20+
 - pnpm (instalar con `npm i -g pnpm` si no lo tienes)
 - Cuenta Turso con una database creada
-- Para dev móvil: Expo Go (Fase 3) o development build local con Android Studio (Fase 4+)
+- Para dev móvil: Expo Go para iteración inicial, o development build (local con Android Studio o cloud con EAS Build) para features con código nativo (push remotas, geofencing background)
 
 ### Variables de entorno
 
@@ -238,11 +240,23 @@ Better-Auth con email/password, bearer tokens, SecureStore, login/register/logou
 - Backend: endpoints REST con validación Zod
 - Mobile: tabs (Agenda / Lugares / Ajustes), formulario de lugar con mapa + búsqueda por dirección, asistente de alarma (3 tipos), notificaciones locales para alarmas de hora
 
-### Fase 4 — Geofencing en background ⏳
-En desarrollo. Requiere dev build (no Expo Go).
+### Fase 4 — Geofencing en background ✅
+- Polling + MapLibre + snooze + fire-and-deactivate, unified location-task service
+- Iteraciones de fiabilidad: proactive trigger en outside→inside edge, faster updates while moving, debounce 60s en eventos nativos, "nearby" fires at outer radius sin confirmation polling, skip confirmation polling para repeat=always enter
+- Requiere development build (no Expo Go)
 
-### Fase 5 — Amigos + sharing 📋
-Pendiente.
+### Fase 5 — Amigos + cross-agenda alarms ✅
+- Sistema de amigos: friend requests + accept/reject + listing
+- Place sharing entre amigos
+- Cross-agenda alarms: creas una alarma en la agenda de otro usuario; la ubicación nunca se comparte, solo la definición de la alarma. El receptor evalúa el geofencing localmente con su propia ubicación
+- Push remotas para friend requests + cross-agenda alarms (cliente Expo Push)
+- Mobile UI: pantalla "Sent alarms" (vista del creador), pantalla "pending-alarm detail" (vista del receptor), tab badge para items pendientes, toasts
+
+### Features extra (post-roadmap)
+
+- **Notify contact at fire time**: al dispararse una alarma, ofrece botones Call + WhatsApp directos al contacto seleccionado. Picker desde la phonebook del móvil.
+- **Distribución cloud via EAS Build**: APK preview por URL descargable (sin USB) + AAB production para Play Store. Updates OTA con `eas update` para cambios JS sin rebuild.
+- **Branding propio**: app icon + splash con identidad visual de la app.
 
 ## Licencia
 
