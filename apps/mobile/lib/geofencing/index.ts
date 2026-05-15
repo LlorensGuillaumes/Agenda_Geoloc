@@ -125,18 +125,21 @@ TaskManager.defineTask<GeofenceTaskData>(GEOFENCE_TASK, async ({ data, error }) 
   // Filtrar por ventana horaria si está definida.
   if (info?.activeWindow && !isInsideActiveWindow(info.activeWindow)) return;
 
-  // Tres caminos según el evento configurado:
+  // Caminos según evento + repeat:
   //
-  // - `event === 'enter'` y entramos: polling de confirmación al radio
-  //   interno (precisión real "estás en el sitio"). La notificación sale
-  //   cuando el polling confirma posición; el markAlarmFired lo dispara
-  //   `polling.ts` al confirmar.
-  // - `event === 'nearby'` y entramos: notificación instantánea al tocar
-  //   el radio externo. No buscamos precisión — la idea es "te aviso al
-  //   pasar cerca", típicamente con radios mayores (200-500m).
-  // - `event === 'exit'` y salimos: notificación instantánea con el margen
-  //   del radio externo.
-  if (isEnter && info && info.event === 'enter') {
+  // - `event === 'enter'` + `repeat === 'once'`: polling de confirmación al
+  //   radio interno (precisión real "estás en el sitio"). La notificación
+  //   sale cuando el polling confirma posición; markAlarmFired lo hace
+  //   `polling.ts` al confirmar. Importante para evitar que un disparo
+  //   prematuro consuma el único trigger de una alarma `once`.
+  // - `event === 'enter'` + `repeat === 'always'`: notificación instantánea
+  //   al primer ENTER del nativo. Sin polling: como puede dispararse muchas
+  //   veces, no compensa esperar precisión — si el GPS oscila al borde, el
+  //   polling con radio interno > radio externo puede no confirmar nunca
+  //   (caso de radios <25m, donde inner cae fuera del cercle real).
+  // - `event === 'nearby'` y entramos: igual, instantánea al outer radius.
+  // - `event === 'exit'` y salimos: instantánea.
+  if (isEnter && info && info.event === 'enter' && info.repeat !== 'always') {
     const innerRadius = Math.max(
       INNER_RADIUS_MIN,
       Math.round(info.outerRadius * INNER_RADIUS_RATIO),
@@ -152,6 +155,23 @@ TaskManager.defineTask<GeofenceTaskData>(GEOFENCE_TASK, async ({ data, error }) 
       notifyConfig: info.notifyConfig ?? null,
     });
     return;
+  }
+
+  // Debounce de 60s: GMS pot disparar el mateix event diverses vegades en
+  // pocs segons quan el GPS oscil·la al borde del cercle (típic amb radis
+  // petits). Sense aquest filtre, "Surts" pot rebotar fins a saturar les
+  // notificacions. Per a `repeat='once'` no cal (el fired flag ja bloqueja);
+  // per a `always` sí.
+  const recentKey = `recent-fired:${region.identifier}:${isEnter ? 'enter' : 'exit'}`;
+  const RECENT_TTL_MS = 60 * 1000;
+  try {
+    const raw = await AsyncStorage.getItem(recentKey);
+    if (raw) {
+      const ts = Number(raw);
+      if (Number.isFinite(ts) && Date.now() - ts < RECENT_TTL_MS) return;
+    }
+  } catch {
+    // ignore
   }
 
   const contactData = buildContactData(info?.notifyConfig);
@@ -170,9 +190,14 @@ TaskManager.defineTask<GeofenceTaskData>(GEOFENCE_TASK, async ({ data, error }) 
     },
     trigger: Platform.OS === 'android' ? { channelId: ALARM_CHANNEL_ID } : null,
   });
-  // Para 'nearby' (enter directo) y 'exit' directo: marcar como fired si
-  // es de un solo uso. 'enter' con polling lo hace `polling.ts` al
-  // confirmar la posición precisa.
+  try {
+    await AsyncStorage.setItem(recentKey, String(Date.now()));
+  } catch {
+    // ignore
+  }
+  // Para 'nearby' (enter directo), 'enter' con 'always' y 'exit' directo:
+  // marcar como fired si es de un solo uso. 'enter' con repeat='once' lo
+  // gestiona `polling.ts` al confirmar la posición precisa.
   await markAlarmFired(region.identifier, info?.repeat);
 });
 

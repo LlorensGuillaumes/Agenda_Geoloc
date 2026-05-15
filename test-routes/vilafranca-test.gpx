@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="Agenda Test" xmlns="http://www.topografix.com/GPX/1/1">
+  <metadata>
+    <name>Agenda — test 3 alarmes Vilafranca</name>
+    <desc>Recorregut: arribada des de fora → passa pel Mercadona (nearby) → arriba a Casa (enter) → surt de Casa (exit) → passa pel Párking (nearby)</desc>
+  </metadata>
+  <trk>
+    <name>Test Vilafranca</name>
+    <trkseg>
+      <!-- Inici lluny al nord-est, fora de tots els cercles (uns 600m) -->
+      <trkpt lat="41.3530" lon="1.7090"/>
+      <trkpt lat="41.3525" lon="1.7080"/>
+      <trkpt lat="41.3520" lon="1.7070"/>
+      <trkpt lat="41.3515" lon="1.7060"/>
+      <!-- Apropant-se al Mercadona (centre 41.3502, 1.7046, radi 50m) -->
+      <trkpt lat="41.3510" lon="1.7053"/>
+      <trkpt lat="41.3506" lon="1.7050"/>
+      <!-- Passant pel Mercadona (dins el cercle) -->
+      <trkpt lat="41.3502" lon="1.7046"/>
+      <trkpt lat="41.3498" lon="1.7043"/>
+      <!-- Continuant cap a Casa (centre 41.3481, 1.7030, radi 20m) -->
+      <trkpt lat="41.3493" lon="1.7040"/>
+      <trkpt lat="41.3488" lon="1.7035"/>
+      <trkpt lat="41.3484" lon="1.7032"/>
+      <!-- Arribant a Casa (dins el cercle de 20m) -->
+      <trkpt lat="41.3481" lon="1.7030"/>
+      <!-- 30 segons d'estada a casa (mateix punt) -->
+      <trkpt lat="41.3481" lon="1.7030"/>
+      <trkpt lat="41.3481" lon="1.7030"/>
+      <!-- Sortida de Casa cap al Párking -->
+      <trkpt lat="41.3478" lon="1.7032"/>
+      <trkpt lat="41.3475" lon="1.7035"/>
+      <trkpt lat="41.3471" lon="1.7037"/>
+      <!-- Apropant-se al Párking (centre 41.3464, 1.7042, radi 50m) -->
+      <trkpt lat="41.3468" lon="1.7040"/>
+      <!-- Dins el cercle del Párking -->
+      <trkpt lat="41.3464" lon="1.7042"/>
+      <trkpt lat="41.3460" lon="1.7044"/>
+      <!-- Sortint cap al sud -->
+      <trkpt lat="41.3455" lon="1.7048"/>
+      <trkpt lat="41.3450" lon="1.7052"/>
+    </trkseg>
+  </trk>
+</gpx>

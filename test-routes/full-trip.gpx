@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="Agenda Test" xmlns="http://www.topografix.com/GPX/1/1">
+  <metadata>
+    <name>Ruta completa Vilafranca</name>
+    <desc>Autopista 120 → sortida Tarragona → Párking (urbà 40) → caminar a Casa → estada 10 min → caminar a Institut Pingu</desc>
+  </metadata>
+  <trk>
+    <name>Full trip</name>
+    <trkseg>
+      <trkpt lat="41.3097584" lon="1.6232815"><time>2026-05-15T10:00:00.000Z</time></trkpt>
+      <trkpt lat="41.3160000" lon="1.6380000"><time>2026-05-15T10:00:42.350Z</time></trkpt>
+      <trkpt lat="41.3210000" lon="1.6520000"><time>2026-05-15T10:01:21.189Z</time></trkpt>
+      <trkpt lat="41.3250000" lon="1.6650000"><time>2026-05-15T10:01:56.384Z</time></trkpt>
+      <trkpt lat="41.3278123" lon="1.6751040"><time>2026-05-15T10:02:23.379Z</time></trkpt>
+      <trkpt lat="41.3320000" lon="1.6840000"><time>2026-05-15T10:03:42.280Z</time></trkpt>
+      <trkpt lat="41.3380000" lon="1.6920000"><time>2026-05-15T10:05:07.246Z</time></trkpt>
+      <trkpt lat="41.3420000" lon="1.6980000"><time>2026-05-15T10:06:07.535Z</time></trkpt>
+      <trkpt lat="41.3450000" lon="1.7020000"><time>2026-05-15T10:06:50.015Z</time></trkpt>
+      <trkpt lat="41.3464249" lon="1.7042545"><time>2026-05-15T10:07:12.156Z</time></trkpt>
+      <trkpt lat="41.3470000" lon="1.7039500"><time>2026-05-15T10:08:01.705Z</time></trkpt>
+      <trkpt lat="41.3477000" lon="1.7032500"><time>2026-05-15T10:09:11.782Z</time></trkpt>
+      <trkpt lat="41.3481472" lon="1.7030276"><time>2026-05-15T10:09:49.999Z</time></trkpt>
+      <trkpt lat="41.3481472" lon="1.7030276"><time>2026-05-15T10:09:49.999Z</time></trkpt>
+      <trkpt lat="41.3481472" lon="1.7030276"><time>2026-05-15T10:10:19.999Z</time></trkpt>
+      <trkpt lat="41.3481472" lon="1.7030276"><time>2026-05-15T10:10:49.999Z</time></trkpt>
+      <trkpt lat="41.3481472" lon="1.7030276"><time>2026-05-15T10:11:19.999Z</time></trkpt>
+      <trkpt lat="41.3481472" lon="1.7030276"><time>2026-05-15T10:11:49.999Z</time></trkpt>
+      <trkpt lat="41.3481472" lon="1.7030276"><time>2026-05-15T10:12:19.999Z</time></trkpt>
+      <trkpt lat="41.3481472" lon="1.7030276"><time>2026-05-15T10:12:49.999Z</time></trkpt>
+      <trkpt lat="41.3481472" lon="1.7030276"><time>2026-05-15T10:13:19.999Z</time></trkpt>
+      <trkpt lat="41.3481472" lon="1.7030276"><time>2026-05-15T10:13:49.999Z</time></trkpt>
+      <trkpt lat="41.3481472" lon="1.7030276"><time>2026-05-15T10:14:19.999Z</time></trkpt>
+      <trkpt lat="41.3481472" lon="1.7030276"><time>2026-05-15T10:14:49.999Z</time></trkpt>
+      <trkpt lat="41.3481472" lon="1.7030276"><time>2026-05-15T10:15:19.999Z</time></trkpt>
+      <trkpt lat="41.3481472" lon="1.7030276"><time>2026-05-15T10:15:49.999Z</time></trkpt>
+      <trkpt lat="41.3481472" lon="1.7030276"><time>2026-05-15T10:16:19.999Z</time></trkpt>
+      <trkpt lat="41.3481472" lon="1.7030276"><time>2026-05-15T10:16:49.999Z</time></trkpt>
+      <trkpt lat="41.3481472" lon="1.7030276"><time>2026-05-15T10:17:19.999Z</time></trkpt>
+      <trkpt lat="41.3481472" lon="1.7030276"><time>2026-05-15T10:17:49.999Z</time></trkpt>
+      <trkpt lat="41.3481472" lon="1.7030276"><time>2026-05-15T10:18:19.999Z</time></trkpt>
+      <trkpt lat="41.3481472" lon="1.7030276"><time>2026-05-15T10:18:49.999Z</time></trkpt>
+      <trkpt lat="41.3481472" lon="1.7030276"><time>2026-05-15T10:19:19.999Z</time></trkpt>
+      <trkpt lat="41.3473000" lon="1.7002000"><time>2026-05-15T10:22:52.980Z</time></trkpt>
+      <trkpt lat="41.3460000" lon="1.6972000"><time>2026-05-15T10:26:21.173Z</time></trkpt>
+      <trkpt lat="41.3443000" lon="1.6950000"><time>2026-05-15T10:29:30.933Z</time></trkpt>
+      <trkpt lat="41.3425000" lon="1.6937000"><time>2026-05-15T10:32:14.862Z</time></trkpt>
+      <trkpt lat="41.3403035" lon="1.6923677"><time>2026-05-15T10:35:28.091Z</time></trkpt>
+    </trkseg>
+  </trk>
+</gpx>
