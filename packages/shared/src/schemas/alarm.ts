@@ -53,7 +53,8 @@ export const createAlarmSchema = z
     triggerType: triggerTypeSchema,
     timeConfig: timeConfigSchema.optional(),
     locationConfig: locationConfigSchema.optional(),
-    ownerId: z.string().uuid().optional(),
+    // ownerId viene de Better-Auth (formato propio, no UUID v4 estándar).
+    ownerId: z.string().min(1).optional(),
   })
   .refine(
     (data) => {

@@ -7,8 +7,11 @@ export const searchFriendSchema = z.object({
   email: z.string().email(),
 });
 
+// Better-Auth genera IDs de usuario con un esquema propio (no UUID v4
+// estándar), por eso aceptamos cualquier string no vacío. El backend valida
+// la existencia del addressee en su tabla `user`.
 export const friendRequestSchema = z.object({
-  addresseeId: z.string().uuid(),
+  addresseeId: z.string().min(1),
 });
 
 export const updateFriendSchema = z.object({

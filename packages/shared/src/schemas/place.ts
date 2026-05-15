@@ -12,8 +12,10 @@ export const placeSchema = z.object({
 
 export const updatePlaceSchema = placeSchema.partial();
 
+// userId proviene de Better-Auth (no UUID v4 estándar) — aceptamos cualquier
+// string. El backend valida que sea un user existente y amistad aceptada.
 export const sharePlaceSchema = z.object({
-  userId: z.string().uuid(),
+  userId: z.string().min(1),
 });
 
 export type PlaceInput = z.infer<typeof placeSchema>;
