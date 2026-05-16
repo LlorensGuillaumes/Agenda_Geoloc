@@ -258,7 +258,7 @@ function isInsideActiveWindow(
 async function fireProactiveNotification(
   alarmId: string,
   info: GeofenceCache,
-  eventType: 'nearby' | 'enter' | 'exit',
+  eventType: 'nearby' | 'enter',
 ): Promise<void> {
   const contactData = buildContactData(info.notifyConfig);
   const hasActions = (info.notifyConfig?.actions?.length ?? 0) > 0;
@@ -361,8 +361,10 @@ TaskManager.defineTask<LocationTaskData>(POLLING_TASK, async ({ data, error }) =
         if (await firedMod.isAlarmFired(alarmId)) continue;
         const info = await readGeofenceCache(alarmId);
         if (!info) continue;
-        // Si hi ha polling de confirmació en curs (només passa per
-        // event='enter' amb repeat='once'), no toquem — el polling ja confirma.
+        if (info.event === 'exit') continue;
+        if (info.repeat === 'always') continue;
+        // Si hay polling de confirmación en curso para este alarm, no dispares
+        // a la vez — el polling lo cubre cuando confirme.
         const pollingActive = await AsyncStorage.getItem(
           `${POLLING_PREFIX}${alarmId}`,
         );
@@ -377,8 +379,18 @@ TaskManager.defineTask<LocationTaskData>(POLLING_TASK, async ({ data, error }) =
           PROACTIVE_INNER_MIN,
           Math.round(info.outerRadius * PROACTIVE_INNER_RATIO),
         );
+        // El trigger no pot ser més gran que el radi extern. Si l'usuari
+        // configura un radi petit (p.ex. 20m) i l'inner per defecte (25m)
+        // queda més gran, dispararíem fora del cercle real → ho limitem.
+        const triggerDist =
+          info.event === 'nearby'
+            ? info.outerRadius
+            : Math.min(info.outerRadius, innerRadius);
 
-        // Llegim/escrivim sempre la última distància coneguda.
+        // Edge-detection: només disparem en transició "fora → dins". Llegim
+        // la última distància coneguda. Si no n'hi havia (primera execució
+        // amb aquesta alarma a la cache), guardem la actual i NO disparem
+        // — així evitem el cas "l'usuari activa l'alarma estant ja dins".
         const lastDistRaw = await AsyncStorage.getItem(
           `${PROACTIVE_DIST_PREFIX}${alarmId}`,
         );
@@ -387,41 +399,17 @@ TaskManager.defineTask<LocationTaskData>(POLLING_TASK, async ({ data, error }) =
           `${PROACTIVE_DIST_PREFIX}${alarmId}`,
           String(Math.round(dist)),
         );
+
         if (lastDist === null) continue; // primer update, no decidim
+        if (lastDist <= triggerDist) continue; // ja era dins, no és transició
+        if (dist > triggerDist) continue; // segueix fora
 
-        // Decidim disparo i tipus segons l'event configurat.
-        let eventType: 'enter' | 'nearby' | 'exit' | null = null;
-        if (info.event === 'enter') {
-          // Trigger no pot superar el radi extern (cas radi<25m → inner cau fora).
-          const triggerDist = Math.min(info.outerRadius, innerRadius);
-          if (lastDist > triggerDist && dist <= triggerDist) eventType = 'enter';
-        } else if (info.event === 'nearby') {
-          if (lastDist > info.outerRadius && dist <= info.outerRadius) {
-            eventType = 'nearby';
-          }
-        } else if (info.event === 'exit') {
-          // EXIT: transició dins → fora al tocar el radi extern. Així
-          // disparem just al passar el límit, sense esperar el GMS native
-          // (que sovint detecta el EXIT bastant més tard).
-          if (lastDist <= info.outerRadius && dist > info.outerRadius) {
-            eventType = 'exit';
-          }
-        }
-        if (!eventType) continue;
-
-        // Debounce per a `repeat='always'`: evitem rebots de GMS + proactiu
-        // disparant la mateixa transició dues vegades en menys d'1 min.
-        if (info.repeat === 'always') {
-          const recentKey = `recent-fired:${alarmId}:${eventType}`;
-          const recentRaw = await AsyncStorage.getItem(recentKey);
-          if (recentRaw) {
-            const ts = Number(recentRaw);
-            if (Number.isFinite(ts) && Date.now() - ts < 60_000) continue;
-          }
-          await AsyncStorage.setItem(recentKey, String(Date.now()));
-        }
-
-        await fireProactiveNotification(alarmId, info, eventType);
+        // Transició fora → dins: dispara
+        await fireProactiveNotification(
+          alarmId,
+          info,
+          info.event === 'nearby' ? 'nearby' : 'enter',
+        );
         await firedMod.markAlarmFired(alarmId, info.repeat);
       }
     }
