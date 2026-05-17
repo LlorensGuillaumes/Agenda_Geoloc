@@ -82,8 +82,13 @@ async function readPollingEntries(): Promise<PollingEntry[]> {
   return entries;
 }
 
+const POLLING_LAST_DIST_PREFIX = 'polling-lastdist:';
+
 async function removePollingEntry(alarmId: string): Promise<void> {
-  await AsyncStorage.removeItem(`${POLLING_PREFIX}${alarmId}`);
+  await AsyncStorage.multiRemove([
+    `${POLLING_PREFIX}${alarmId}`,
+    `${POLLING_LAST_DIST_PREFIX}${alarmId}`,
+  ]);
 }
 
 async function readKeepaliveIds(): Promise<string[]> {
@@ -202,7 +207,9 @@ export async function clearAllPolling(): Promise<void> {
   const keys = await AsyncStorage.getAllKeys();
   const toRemove = keys.filter(
     (k) =>
-      k.startsWith(POLLING_PREFIX) || k.startsWith(PROACTIVE_DIST_PREFIX),
+      k.startsWith(POLLING_PREFIX) ||
+      k.startsWith(PROACTIVE_DIST_PREFIX) ||
+      k.startsWith(POLLING_LAST_DIST_PREFIX),
   );
   if (toRemove.length > 0) await AsyncStorage.multiRemove(toRemove);
   await AsyncStorage.removeItem(KEEPALIVE_KEY);
@@ -310,33 +317,46 @@ TaskManager.defineTask<LocationTaskData>(POLLING_TASK, async ({ data, error }) =
       latitude: entry.centerLat,
       longitude: entry.centerLng,
     });
-    if (dist <= entry.innerRadius) {
-      const contactData = buildContactData(entry.notifyConfig);
-      const hasActions = (entry.notifyConfig?.actions?.length ?? 0) > 0;
-      await Notifications.scheduleNotificationAsync({
-        content: {
-          title: entry.title,
-          body: entry.notes ?? '',
-          data: {
-            alarmId: entry.alarmId,
-            eventType: 'enter',
-            confirmed: true,
-            ...(contactData ?? {}),
-          },
-          categoryIdentifier: hasActions ? ALARM_ACTIONS_CATEGORY : ALARM_CATEGORY,
-          sound: 'default',
+
+    // Edge detection: guardem la dist anterior i només disparem en la
+    // transició fora→dins. Si l'usuari estava ja dins quan es va iniciar
+    // el polling (cas típic: registrar la geofence estant a casa, GMS
+    // dispara un ENTER artificial), la primera mostra NO dispara. Hem
+    // d'esperar que es separi prou per després tornar a entrar.
+    const lastKey = `${POLLING_LAST_DIST_PREFIX}${entry.alarmId}`;
+    const lastRaw = await AsyncStorage.getItem(lastKey);
+    const lastDist = lastRaw ? Number(lastRaw) : null;
+    await AsyncStorage.setItem(lastKey, String(Math.round(dist)));
+
+    const inside = dist <= entry.innerRadius;
+    const transitioning = lastDist !== null && lastDist > entry.innerRadius && inside;
+    if (!transitioning) continue;
+
+    const contactData = buildContactData(entry.notifyConfig);
+    const hasActions = (entry.notifyConfig?.actions?.length ?? 0) > 0;
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: entry.title,
+        body: entry.notes ?? '',
+        data: {
+          alarmId: entry.alarmId,
+          eventType: 'enter',
+          confirmed: true,
+          ...(contactData ?? {}),
         },
-        trigger: Platform.OS === 'android' ? { channelId: ALARM_CHANNEL_ID } : null,
-      });
-      await removePollingEntry(entry.alarmId);
-      // Notificar al sistema de "fire-and-deactivate". El import dinámico
-      // evita ciclo de imports entre polling.ts y index.ts.
-      try {
-        const mod = await import('./fired');
-        await mod.markAlarmFiredIfOnce(entry.alarmId);
-      } catch {
-        // ignore
-      }
+        categoryIdentifier: hasActions ? ALARM_ACTIONS_CATEGORY : ALARM_CATEGORY,
+        sound: 'default',
+      },
+      trigger: Platform.OS === 'android' ? { channelId: ALARM_CHANNEL_ID } : null,
+    });
+    await removePollingEntry(entry.alarmId);
+    // Notificar al sistema de "fire-and-deactivate". El import dinámico
+    // evita ciclo de imports entre polling.ts y index.ts.
+    try {
+      const mod = await import('./fired');
+      await mod.markAlarmFiredIfOnce(entry.alarmId);
+    } catch {
+      // ignore
     }
   }
 
