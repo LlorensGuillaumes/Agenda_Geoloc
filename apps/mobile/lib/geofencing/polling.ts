@@ -83,11 +83,17 @@ async function readPollingEntries(): Promise<PollingEntry[]> {
 }
 
 const POLLING_LAST_DIST_PREFIX = 'polling-lastdist:';
+// Comptador de mostres consecutives "clarament fora" per alarma. Cal
+// arribar a OUTSIDE_STREAK_NEEDED abans que una mostra dins compti com
+// a cross-in real. Així una sola oscil·lació GPS no enganya.
+const OUTSIDE_STREAK_PREFIX = 'polling-outside-streak:';
+const OUTSIDE_STREAK_NEEDED = 2;
 
 async function removePollingEntry(alarmId: string): Promise<void> {
   await AsyncStorage.multiRemove([
     `${POLLING_PREFIX}${alarmId}`,
     `${POLLING_LAST_DIST_PREFIX}${alarmId}`,
+    `${OUTSIDE_STREAK_PREFIX}${alarmId}`,
   ]);
 }
 
@@ -209,7 +215,9 @@ export async function clearAllPolling(): Promise<void> {
     (k) =>
       k.startsWith(POLLING_PREFIX) ||
       k.startsWith(PROACTIVE_DIST_PREFIX) ||
-      k.startsWith(POLLING_LAST_DIST_PREFIX),
+      k.startsWith(POLLING_LAST_DIST_PREFIX) ||
+      k.startsWith(OUTSIDE_STREAK_PREFIX) ||
+      k.startsWith('proactive-outside-streak:'),
   );
   if (toRemove.length > 0) await AsyncStorage.multiRemove(toRemove);
   await AsyncStorage.removeItem(KEEPALIVE_KEY);
@@ -341,16 +349,34 @@ TaskManager.defineTask<LocationTaskData>(POLLING_TASK, async ({ data, error }) =
     await AsyncStorage.setItem(lastKey, String(Math.round(dist)));
 
     // Per evitar falsos cross-in causats per oscil·lacions del GPS
-    // (especialment a interiors, on pot saltar 30m amunt i avall), cal que
-    // la posició anterior fos clarament fora del cercle, no només +1m. 30m
-    // de margin és prou per ignorar oscil·lacions típiques.
+    // (especialment a interiors, on pot saltar 30m amunt i avall), exigim
+    // dues mostres consecutives "clarament fora" abans que una mostra "dins"
+    // compti com una arribada real. Així una sola lectura GPS dolenta no
+    // simula una sortida + tornada.
     const REQUIRED_EXIT_MARGIN_M = 30;
+    const streakKey = `${OUTSIDE_STREAK_PREFIX}${entry.alarmId}`;
+    const streakRaw = await AsyncStorage.getItem(streakKey);
+    let outsideStreak = streakRaw ? Number(streakRaw) : 0;
+
     const inside = dist <= entry.innerRadius;
-    const transitioning =
-      lastDist !== null &&
-      lastDist > entry.innerRadius + REQUIRED_EXIT_MARGIN_M &&
-      inside;
-    if (!transitioning) continue;
+    const clearlyOutside = dist > entry.innerRadius + REQUIRED_EXIT_MARGIN_M;
+
+    if (clearlyOutside) {
+      outsideStreak += 1;
+      await AsyncStorage.setItem(streakKey, String(outsideStreak));
+      continue;
+    }
+
+    if (!inside) {
+      // Zona buffer entre triggerDist i triggerDist+margin: no resetejem
+      // el streak (l'usuari pot estar caminant prop del límit).
+      continue;
+    }
+
+    // dist <= innerRadius. Només dispara si el streak ha arribat al mínim.
+    if (outsideStreak < OUTSIDE_STREAK_NEEDED) continue;
+    // Reset streak abans de disparar; el polling es retira tot seguit.
+    await AsyncStorage.removeItem(streakKey);
 
     const contactData = buildContactData(entry.notifyConfig);
     const hasActions = (entry.notifyConfig?.actions?.length ?? 0) > 0;
@@ -447,13 +473,23 @@ TaskManager.defineTask<LocationTaskData>(POLLING_TASK, async ({ data, error }) =
           String(Math.round(dist)),
         );
 
-        // Mateix marge de seguretat que el polling de confirmació: cal que
-        // la posició anterior fos clarament fora del cercle (no només +1m)
-        // per evitar disparos falsos per oscil·lacions del GPS.
+        // Mateixa lògica anti-oscil·lació que el polling de confirmació:
+        // cal acumular dues mostres consecutives "clarament fora" abans
+        // que una mostra "dins" compti com a cross-in.
         const PROACTIVE_EXIT_MARGIN_M = 30;
-        if (lastDist === null) continue; // primer update, no decidim
-        if (lastDist <= triggerDist + PROACTIVE_EXIT_MARGIN_M) continue; // no era prou fora
-        if (dist > triggerDist) continue; // segueix fora
+        const proactiveStreakKey = `proactive-outside-streak:${alarmId}`;
+        const proactiveStreakRaw = await AsyncStorage.getItem(proactiveStreakKey);
+        let proactiveStreak = proactiveStreakRaw ? Number(proactiveStreakRaw) : 0;
+
+        const clearlyOutsideProactive = dist > triggerDist + PROACTIVE_EXIT_MARGIN_M;
+        if (clearlyOutsideProactive) {
+          proactiveStreak += 1;
+          await AsyncStorage.setItem(proactiveStreakKey, String(proactiveStreak));
+          continue;
+        }
+        if (dist > triggerDist) continue; // zona buffer, no resetegem
+        if (proactiveStreak < OUTSIDE_STREAK_NEEDED) continue;
+        await AsyncStorage.removeItem(proactiveStreakKey);
 
         // Transició fora → dins: dispara
         await fireProactiveNotification(
