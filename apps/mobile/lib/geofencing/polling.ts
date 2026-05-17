@@ -295,10 +295,22 @@ async function fireProactiveNotification(
 
 type LocationTaskData = { locations: Location.LocationObject[] };
 
+// Si el GPS reporta una accuracy pitjor que això, la posició és tan
+// imprecisa que pot oscil·lar fora i dins d'un cercle petit per error.
+// Ignorem aquests updates a tots els efectes (no actualitzem lastDist
+// ni intentem disparar). Per a radis grans (>200m) ja no importa tant,
+// però filtrar és igualment defensiu.
+const MAX_ACCURACY_M = 50;
+
 TaskManager.defineTask<LocationTaskData>(POLLING_TASK, async ({ data, error }) => {
   if (error) return;
   if (!data?.locations || data.locations.length === 0) return;
   const last = data.locations[data.locations.length - 1];
+  const accuracy = last.coords.accuracy ?? 999;
+  if (accuracy > MAX_ACCURACY_M) {
+    // GPS poc fiable: no contaminem l'estat amb una mostra dubtosa.
+    return;
+  }
   const cur: LatLng = {
     latitude: last.coords.latitude,
     longitude: last.coords.longitude,
