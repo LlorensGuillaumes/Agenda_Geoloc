@@ -106,8 +106,15 @@ async function writeKeepaliveIds(ids: string[]): Promise<void> {
 }
 
 async function startLocationTask(notificationBody: string): Promise<void> {
+  // El text del foreground service (`notificationBody`) només s'aplica a
+  // l'arrencada. Si el service ja corria amb un altre nombre d'alarmes,
+  // aturem-lo i tornem a arrencar perquè el comptador "Vigilant N llocs"
+  // quedi actualitzat. El cost és baix: només passa quan l'usuari crea/
+  // esborra alarmes.
   const running = await Location.hasStartedLocationUpdatesAsync(POLLING_TASK);
-  if (running) return;
+  if (running) {
+    await Location.stopLocationUpdatesAsync(POLLING_TASK).catch(() => {});
+  }
   await Location.startLocationUpdatesAsync(POLLING_TASK, {
     accuracy: Location.Accuracy.Balanced,
     // `timeInterval`: máximo cada 30s parado. `distanceInterval: 100` pide
