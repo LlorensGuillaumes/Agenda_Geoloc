@@ -29,6 +29,11 @@ import {
   ALARM_CHANNEL_ID,
   buildContactData,
 } from '../notifications';
+import {
+  getTestModeEnabled,
+  sendTraceBatch,
+} from '../testing/traces';
+import type { TraceItemInput } from '@agenda/shared';
 
 export const POLLING_TASK = 'agenda.location-polling-task';
 const POLLING_PREFIX = 'polling:';
@@ -315,8 +320,24 @@ TaskManager.defineTask<LocationTaskData>(POLLING_TASK, async ({ data, error }) =
   if (!data?.locations || data.locations.length === 0) return;
   const last = data.locations[data.locations.length - 1];
   const accuracy = last.coords.accuracy ?? 999;
+  const testModeEnabled = await getTestModeEnabled();
+  const traceBuffer: TraceItemInput[] = [];
+  const tsISO = new Date().toISOString();
   if (accuracy > MAX_ACCURACY_M) {
     // GPS poc fiable: no contaminem l'estat amb una mostra dubtosa.
+    if (testModeEnabled) {
+      sendTraceBatch([
+        {
+          ts: tsISO,
+          lat: last.coords.latitude,
+          lng: last.coords.longitude,
+          accuracy,
+          source: 'skip-low-accuracy',
+          didFire: false,
+          note: `accuracy ${Math.round(accuracy)}m > ${MAX_ACCURACY_M}m`,
+        },
+      ]);
+    }
     return;
   }
   const cur: LatLng = {
@@ -482,13 +503,51 @@ TaskManager.defineTask<LocationTaskData>(POLLING_TASK, async ({ data, error }) =
         let proactiveStreak = proactiveStreakRaw ? Number(proactiveStreakRaw) : 0;
 
         const clearlyOutsideProactive = dist > triggerDist + PROACTIVE_EXIT_MARGIN_M;
+        const traceBase: TraceItemInput = {
+          ts: tsISO,
+          lat: cur.latitude,
+          lng: cur.longitude,
+          accuracy,
+          alarmId,
+          alarmTitle: info.title,
+          alarmEvent: info.event,
+          alarmRepeat: info.repeat ?? 'once',
+          outerRadius: info.outerRadius,
+          distance: Math.round(dist),
+          insideOuter: dist <= info.outerRadius,
+          lastDistance: lastDist === null ? null : Math.round(lastDist),
+          outsideStreak: proactiveStreak,
+          didFire: false,
+          source: 'proactive',
+          note: null,
+        };
         if (clearlyOutsideProactive) {
           proactiveStreak += 1;
           await AsyncStorage.setItem(proactiveStreakKey, String(proactiveStreak));
+          if (testModeEnabled) {
+            traceBuffer.push({
+              ...traceBase,
+              outsideStreak: proactiveStreak,
+              note: 'clearly outside, streak++',
+            });
+          }
           continue;
         }
-        if (dist > triggerDist) continue; // zona buffer, no resetegem
-        if (proactiveStreak < OUTSIDE_STREAK_NEEDED) continue;
+        if (dist > triggerDist) {
+          if (testModeEnabled) {
+            traceBuffer.push({ ...traceBase, note: 'buffer zone (no fire)' });
+          }
+          continue;
+        }
+        if (proactiveStreak < OUTSIDE_STREAK_NEEDED) {
+          if (testModeEnabled) {
+            traceBuffer.push({
+              ...traceBase,
+              note: `inside but streak ${proactiveStreak} < ${OUTSIDE_STREAK_NEEDED}`,
+            });
+          }
+          continue;
+        }
         await AsyncStorage.removeItem(proactiveStreakKey);
 
         // Transició fora → dins: dispara
@@ -498,8 +557,19 @@ TaskManager.defineTask<LocationTaskData>(POLLING_TASK, async ({ data, error }) =
           info.event === 'nearby' ? 'nearby' : 'enter',
         );
         await firedMod.markAlarmFired(alarmId, info.repeat);
+        if (testModeEnabled) {
+          traceBuffer.push({
+            ...traceBase,
+            didFire: true,
+            note: 'FIRED (proactive)',
+          });
+        }
       }
     }
+  }
+
+  if (testModeEnabled && traceBuffer.length > 0) {
+    sendTraceBatch(traceBuffer);
   }
 
   // No paramos el task aquí: el reconcile lo decide. Si hay keepalive activo

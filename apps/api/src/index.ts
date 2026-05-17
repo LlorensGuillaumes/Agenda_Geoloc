@@ -11,6 +11,7 @@ import placesRouter from './routes/places.js';
 import alarmsRouter from './routes/alarms.js';
 import friendsRouter from './routes/friends.js';
 import devicesRouter from './routes/devices.js';
+import tracesRouter from './routes/traces.js';
 
 const app = express();
 
@@ -52,6 +53,7 @@ app.use('/api/places', placesRouter);
 app.use('/api/alarms', alarmsRouter);
 app.use('/api/friends', friendsRouter);
 app.use('/api/devices', devicesRouter);
+app.use('/api/traces', tracesRouter);
 
 app.use((_req: Request, res: Response) => {
   res.status(404).json({ error: 'Not Found' });

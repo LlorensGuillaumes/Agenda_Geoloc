@@ -318,4 +318,32 @@ export const api = {
         token,
       }),
   },
+
+  traces: {
+    send: (token: string, traces: TraceItem[]) =>
+      request<null>('/api/traces', {
+        method: 'POST',
+        token,
+        body: { traces },
+      }),
+  },
+};
+
+export type TraceItem = {
+  ts: string;
+  lat: number;
+  lng: number;
+  accuracy?: number | null;
+  alarmId?: string | null;
+  alarmTitle?: string | null;
+  alarmEvent?: 'enter' | 'exit' | 'nearby' | null;
+  alarmRepeat?: 'once' | 'always' | null;
+  outerRadius?: number | null;
+  distance?: number | null;
+  insideOuter?: boolean | null;
+  lastDistance?: number | null;
+  outsideStreak?: number | null;
+  didFire: boolean;
+  source?: string | null;
+  note?: string | null;
 };

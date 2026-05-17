@@ -1,0 +1,21 @@
+CREATE TABLE `geofence_traces` (
+	`id` text PRIMARY KEY NOT NULL,
+	`user_id` text NOT NULL,
+	`ts` integer NOT NULL,
+	`lat` real NOT NULL,
+	`lng` real NOT NULL,
+	`accuracy` real,
+	`alarm_id` text,
+	`alarm_title` text,
+	`alarm_event` text,
+	`alarm_repeat` text,
+	`outer_radius` integer,
+	`distance` real,
+	`inside_outer` integer,
+	`last_distance` real,
+	`outside_streak` integer,
+	`did_fire` integer DEFAULT false NOT NULL,
+	`source` text,
+	`note` text,
+	FOREIGN KEY (`user_id`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE cascade
+);

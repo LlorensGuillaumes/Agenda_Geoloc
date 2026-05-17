@@ -147,6 +147,32 @@ export const alarms = sqliteTable('alarms', {
   lastFiredAt: integer('last_fired_at', { mode: 'timestamp' }),
 });
 
+// Diagnostic traces from the device, written when the user enables
+// "Test mode" in settings. Each row is a snapshot of one alarm's
+// distance evaluation at one location update. Used offline for analysis.
+export const geofenceTraces = sqliteTable('geofence_traces', {
+  id: text('id').primaryKey().$defaultFn(uuid),
+  userId: text('user_id')
+    .notNull()
+    .references(() => user.id, { onDelete: 'cascade' }),
+  ts: integer('ts', { mode: 'timestamp' }).notNull(),
+  lat: real('lat').notNull(),
+  lng: real('lng').notNull(),
+  accuracy: real('accuracy'),
+  alarmId: text('alarm_id'),
+  alarmTitle: text('alarm_title'),
+  alarmEvent: text('alarm_event'),
+  alarmRepeat: text('alarm_repeat'),
+  outerRadius: integer('outer_radius'),
+  distance: real('distance'),
+  insideOuter: integer('inside_outer', { mode: 'boolean' }),
+  lastDistance: real('last_distance'),
+  outsideStreak: integer('outside_streak'),
+  didFire: integer('did_fire', { mode: 'boolean' }).notNull().default(false),
+  source: text('source'),
+  note: text('note'),
+});
+
 // ============================================================
 // JSON column types
 // ============================================================
