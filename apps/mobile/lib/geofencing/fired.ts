@@ -40,7 +40,10 @@ async function patchAlarmInactive(alarmId: string): Promise<boolean> {
         Authorization: `Bearer ${token}`,
         Origin: ORIGIN,
       },
-      body: JSON.stringify({ isActive: false }),
+      body: JSON.stringify({
+        isActive: false,
+        lastFiredAt: new Date().toISOString(),
+      }),
     });
     return res.ok;
   } catch {

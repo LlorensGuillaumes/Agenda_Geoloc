@@ -315,6 +315,14 @@ export default function AlarmDetailScreen() {
                       value={`${alarm.locationConfig.customPoint.radiusMeters}m`}
                     />
                   )}
+                <InfoRow
+                  label={t('alarms.repeatAlwaysLabel')}
+                  value={
+                    alarm.locationConfig.repeat === 'always'
+                      ? t('common.yes') ?? 'Sí'
+                      : t('common.no') ?? 'No'
+                  }
+                />
               </>
             )}
             {alarm.notifyConfig && alarm.notifyConfig.actions.length > 0 && (
@@ -405,6 +413,43 @@ export default function AlarmDetailScreen() {
                 trackColor={{ false: '#E5E7EB', true: '#3B82F6' }}
               />
             </View>
+
+            {alarm.locationConfig && (
+              <View className="bg-white rounded-lg border border-gray-200 p-4 mb-4 flex-row items-center justify-between">
+                <View className="flex-1 mr-3">
+                  <Text className="text-base font-medium text-gray-900">
+                    {t('alarms.repeatAlwaysLabel')}
+                  </Text>
+                  <Text className="text-xs text-gray-500 mt-1">
+                    {t('alarms.repeatAlwaysHint')}
+                  </Text>
+                </View>
+                <Switch
+                  value={alarm.locationConfig.repeat === 'always'}
+                  onValueChange={async (v) => {
+                    if (busy) return;
+                    setBusy(true);
+                    try {
+                      await updateAlarm.mutateAsync({
+                        id: alarm.id,
+                        data: {
+                          locationConfig: {
+                            ...alarm.locationConfig!,
+                            repeat: v ? 'always' : 'once',
+                          },
+                        },
+                      });
+                    } catch {
+                      showToast(t('alarms.updateError'), 'error');
+                    } finally {
+                      setBusy(false);
+                    }
+                  }}
+                  disabled={busy}
+                  trackColor={{ false: '#E5E7EB', true: '#3B82F6' }}
+                />
+              </View>
+            )}
 
             <Pressable
               onPress={handleDelete}

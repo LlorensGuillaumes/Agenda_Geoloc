@@ -99,6 +99,10 @@ export const updateAlarmSchema = z.object({
   timeConfig: timeConfigSchema.optional(),
   locationConfig: locationConfigSchema.optional(),
   notifyConfig: notifyConfigSchema.nullable().optional(),
+  // ISO 8601. Quan el client marca una alarma com a disparada (once →
+  // isActive=false), envia també aquest timestamp perquè la UI pugui
+  // distingir entre "pausada manualment" i "disparada automàticament".
+  lastFiredAt: z.string().datetime().nullable().optional(),
 });
 
 export type CreateAlarmInput = z.infer<typeof createAlarmSchema>;

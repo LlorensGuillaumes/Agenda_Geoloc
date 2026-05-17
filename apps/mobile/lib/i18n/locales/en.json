@@ -138,6 +138,7 @@
     "withdrawConfirmTitle": "Withdraw alarm",
     "withdrawConfirmBody": "Are you sure you want to withdraw \"{{title}}\" from {{name}}'s agenda?",
     "withdrawCta": "Withdraw",
+    "fired": "fired",
     "acceptedToast": "Alarm accepted",
     "rejectedToast": "Alarm rejected",
     "deletedToast": "Alarm deleted",

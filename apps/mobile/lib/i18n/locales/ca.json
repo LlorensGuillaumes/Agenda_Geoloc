@@ -138,6 +138,7 @@
     "withdrawConfirmTitle": "Retirar alarma",
     "withdrawConfirmBody": "Segur que vols retirar \"{{title}}\" de l'agenda de {{name}}?",
     "withdrawCta": "Retira",
+    "fired": "disparada",
     "acceptedToast": "Alarma acceptada",
     "rejectedToast": "Alarma rebutjada",
     "deletedToast": "Alarma eliminada",

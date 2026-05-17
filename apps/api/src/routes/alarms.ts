@@ -168,9 +168,16 @@ router.patch('/:id', async (req, res, next) => {
       res.status(403).json({ error: 'Forbidden' });
       return;
     }
+    // Drizzle `mode: 'timestamp'` espera Date al payload. Si el client
+    // envia `lastFiredAt` com a string ISO, el convertim aquí.
+    const { lastFiredAt, ...rest } = data;
+    const setPayload: Record<string, unknown> = { ...rest, updatedAt: new Date() };
+    if (lastFiredAt !== undefined) {
+      setPayload.lastFiredAt = lastFiredAt ? new Date(lastFiredAt) : null;
+    }
     const [row] = await db
       .update(alarms)
-      .set({ ...data, updatedAt: new Date() })
+      .set(setPayload)
       .where(eq(alarms.id, req.params.id))
       .returning();
     res.json(row);

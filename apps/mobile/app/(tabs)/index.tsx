@@ -152,7 +152,7 @@ function AlarmRow({
           </View>
           {!alarm.isActive && (
             <Text className="text-xs text-gray-400 italic ml-2">
-              {t('common.paused')}
+              {alarm.lastFiredAt ? t('alarms.fired') : t('common.paused')}
             </Text>
           )}
         </Pressable>
