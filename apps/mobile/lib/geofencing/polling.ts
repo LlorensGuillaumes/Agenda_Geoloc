@@ -340,8 +340,16 @@ TaskManager.defineTask<LocationTaskData>(POLLING_TASK, async ({ data, error }) =
     const lastDist = lastRaw ? Number(lastRaw) : null;
     await AsyncStorage.setItem(lastKey, String(Math.round(dist)));
 
+    // Per evitar falsos cross-in causats per oscil·lacions del GPS
+    // (especialment a interiors, on pot saltar 30m amunt i avall), cal que
+    // la posició anterior fos clarament fora del cercle, no només +1m. 30m
+    // de margin és prou per ignorar oscil·lacions típiques.
+    const REQUIRED_EXIT_MARGIN_M = 30;
     const inside = dist <= entry.innerRadius;
-    const transitioning = lastDist !== null && lastDist > entry.innerRadius && inside;
+    const transitioning =
+      lastDist !== null &&
+      lastDist > entry.innerRadius + REQUIRED_EXIT_MARGIN_M &&
+      inside;
     if (!transitioning) continue;
 
     const contactData = buildContactData(entry.notifyConfig);
@@ -439,8 +447,12 @@ TaskManager.defineTask<LocationTaskData>(POLLING_TASK, async ({ data, error }) =
           String(Math.round(dist)),
         );
 
+        // Mateix marge de seguretat que el polling de confirmació: cal que
+        // la posició anterior fos clarament fora del cercle (no només +1m)
+        // per evitar disparos falsos per oscil·lacions del GPS.
+        const PROACTIVE_EXIT_MARGIN_M = 30;
         if (lastDist === null) continue; // primer update, no decidim
-        if (lastDist <= triggerDist) continue; // ja era dins, no és transició
+        if (lastDist <= triggerDist + PROACTIVE_EXIT_MARGIN_M) continue; // no era prou fora
         if (dist > triggerDist) continue; // segueix fora
 
         // Transició fora → dins: dispara
