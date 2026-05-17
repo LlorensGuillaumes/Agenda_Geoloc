@@ -3,12 +3,14 @@ import { Alert, Linking, Pressable, Text, View } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
+import { useQueryClient } from '@tanstack/react-query';
 import * as Notifications from 'expo-notifications';
 import {
   getGeofenceDiagnostic,
   getLocationPermissionState,
   isGeofencingActive,
   requestLocationPermissions,
+  unregisterAllGeofences,
   type LocationPermissionState,
 } from '@/lib/geofencing';
 
@@ -28,8 +30,10 @@ const initialState: State = {
 
 export function PermissionsCard() {
   const { t } = useTranslation();
+  const qc = useQueryClient();
   const [state, setState] = useState<State>(initialState);
   const [requesting, setRequesting] = useState(false);
+  const [restarting, setRestarting] = useState(false);
 
   const refresh = useCallback(async () => {
     try {
@@ -148,6 +152,44 @@ export function PermissionsCard() {
         className="mt-3 border border-gray-300 rounded-lg py-2 items-center active:bg-gray-100"
       >
         <Text className="text-xs text-gray-700">Diagnòstic geofencing</Text>
+      </Pressable>
+
+      <Pressable
+        onPress={async () => {
+          if (restarting) return;
+          setRestarting(true);
+          try {
+            // Desregistra tot, força que el pròxim sync arrenqui el location
+            // task amb el bundle actual del JS.
+            await unregisterAllGeofences();
+            // Invalida cache d'alarms i places perquè useGeofenceSync detecti
+            // un fingerprint nou i torni a cridar syncGeofences.
+            await qc.invalidateQueries({ queryKey: ['alarms'] });
+            await qc.invalidateQueries({ queryKey: ['places'] });
+            await refresh();
+            Alert.alert(
+              'Reiniciat',
+              'Geofencing reiniciat. Espera uns segons i tornarà a aparèixer "Vigilant N llocs".',
+            );
+          } catch (err) {
+            Alert.alert(
+              'Error',
+              err instanceof Error ? err.message : 'Unknown',
+            );
+          } finally {
+            setRestarting(false);
+          }
+        }}
+        disabled={restarting}
+        className={`mt-2 border rounded-lg py-2 items-center ${
+          restarting
+            ? 'border-gray-200'
+            : 'border-amber-300 active:bg-amber-50'
+        }`}
+      >
+        <Text className={`text-xs ${restarting ? 'text-gray-400' : 'text-amber-700'}`}>
+          {restarting ? 'Reiniciant…' : 'Reiniciar servei geofencing'}
+        </Text>
       </Pressable>
     </View>
   );
