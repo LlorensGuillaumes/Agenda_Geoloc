@@ -40,11 +40,11 @@ const POLLING_PREFIX = 'polling:';
 const KEEPALIVE_KEY = 'keepalive:active';
 
 const CONFIRM_TIMEOUT_MS = 5 * 60 * 1000;
-// 10s entre location updates quan estàs aturat. Hi havia 30s, però resultava
-// massa poca resolució per detectar transicions ràpides i pel Test Mode el
-// heartbeat surt cada 30s, que dificulta l'anàlisi. 10s pesa poc a bateria
-// (accuracy Balanced) i dona prou granularitat per veure-ho tot.
-const LOCATION_INTERVAL_MS = 10 * 1000;
+// Resolució agressiva per debugging: 5s entre updates + accuracy High al
+// startLocationTask. Costa bateria, però mentre estem afinant l'algoritme
+// preferim veure dades fines a estalviar bateria. Quan acabem el debug,
+// això tornarà a 30s + Balanced.
+const LOCATION_INTERVAL_MS = 5 * 1000;
 
 type LatLng = { latitude: number; longitude: number };
 
@@ -136,7 +136,7 @@ async function startLocationTask(notificationBody: string): Promise<void> {
     await Location.stopLocationUpdatesAsync(POLLING_TASK).catch(() => {});
   }
   await Location.startLocationUpdatesAsync(POLLING_TASK, {
-    accuracy: Location.Accuracy.Balanced,
+    accuracy: Location.Accuracy.High,
     // `timeInterval`: máximo cada 30s parado. `distanceInterval: 100` pide
     // un update extra cada 100m recorridos; a 120 km/h eso son ~3s, así que
     // recibimos updates muy frecuentes en carretera sin gastar batería
