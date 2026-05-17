@@ -323,27 +323,64 @@ TaskManager.defineTask<LocationTaskData>(POLLING_TASK, async ({ data, error }) =
   const testModeEnabled = await getTestModeEnabled();
   const traceBuffer: TraceItemInput[] = [];
   const tsISO = new Date().toISOString();
-  if (accuracy > MAX_ACCURACY_M) {
-    // GPS poc fiable: no contaminem l'estat amb una mostra dubtosa.
-    if (testModeEnabled) {
-      sendTraceBatch([
-        {
-          ts: tsISO,
-          lat: last.coords.latitude,
-          lng: last.coords.longitude,
-          accuracy,
-          source: 'skip-low-accuracy',
-          didFire: false,
-          note: `accuracy ${Math.round(accuracy)}m > ${MAX_ACCURACY_M}m`,
-        },
-      ]);
-    }
-    return;
-  }
   const cur: LatLng = {
     latitude: last.coords.latitude,
     longitude: last.coords.longitude,
   };
+  const lowAccuracy = accuracy > MAX_ACCURACY_M;
+
+  // Emet heartbeat de TOTES les keepalive alarms abans del filtre d'accuracy
+  // — així podem inspeccionar a la BD també les mostres descartades i veure
+  // què veu el dispositiu en cada cas.
+  if (testModeEnabled) {
+    const keepaliveForHeartbeat = await readKeepaliveIds();
+    if (keepaliveForHeartbeat.length > 0) {
+      const heartbeat: TraceItemInput[] = [];
+      for (const alarmId of keepaliveForHeartbeat) {
+        const info = await readGeofenceCache(alarmId);
+        if (!info) continue;
+        const dist = distanceMeters(cur, {
+          latitude: info.centerLat,
+          longitude: info.centerLng,
+        });
+        heartbeat.push({
+          ts: tsISO,
+          lat: cur.latitude,
+          lng: cur.longitude,
+          accuracy,
+          alarmId,
+          alarmTitle: info.title,
+          alarmEvent: info.event,
+          alarmRepeat: info.repeat ?? 'once',
+          outerRadius: info.outerRadius,
+          distance: Math.round(dist),
+          insideOuter: dist <= info.outerRadius,
+          lastDistance: null,
+          outsideStreak: null,
+          didFire: false,
+          source: lowAccuracy ? 'heartbeat-lowacc' : 'heartbeat',
+          note: lowAccuracy
+            ? `accuracy ${Math.round(accuracy)}m > ${MAX_ACCURACY_M}m (sample skipped)`
+            : null,
+        });
+      }
+      if (heartbeat.length > 0) sendTraceBatch(heartbeat);
+    } else {
+      sendTraceBatch([
+        {
+          ts: tsISO,
+          lat: cur.latitude,
+          lng: cur.longitude,
+          accuracy,
+          source: 'heartbeat-no-alarms',
+          didFire: false,
+          note: 'no keepalive alarms',
+        },
+      ]);
+    }
+  }
+
+  if (lowAccuracy) return;
 
   // Procesar pollings de confirmación pendientes
   const entries = await readPollingEntries();
@@ -441,42 +478,6 @@ TaskManager.defineTask<LocationTaskData>(POLLING_TASK, async ({ data, error }) =
   // - Si hay un polling de confirmación activo para el alarmId (event='enter'),
   //   no duplicamos — el polling ya está procesado arriba.
   const keepaliveIds = await readKeepaliveIds();
-
-  // Si Test Mode és actiu, registrem una mostra "heartbeat" per cada
-  // alarma keepalive a cada update — independentment de si la lògica
-  // del proactive entra (els filtres event=exit / repeat=always ho
-  // saltarien). Així veiem totes les distàncies al llarg del temps.
-  if (testModeEnabled && keepaliveIds.length > 0) {
-    const heartbeat: TraceItemInput[] = [];
-    for (const alarmId of keepaliveIds) {
-      const info = await readGeofenceCache(alarmId);
-      if (!info) continue;
-      const dist = distanceMeters(cur, {
-        latitude: info.centerLat,
-        longitude: info.centerLng,
-      });
-      heartbeat.push({
-        ts: tsISO,
-        lat: cur.latitude,
-        lng: cur.longitude,
-        accuracy,
-        alarmId,
-        alarmTitle: info.title,
-        alarmEvent: info.event,
-        alarmRepeat: info.repeat ?? 'once',
-        outerRadius: info.outerRadius,
-        distance: Math.round(dist),
-        insideOuter: dist <= info.outerRadius,
-        lastDistance: null,
-        outsideStreak: null,
-        didFire: false,
-        source: 'heartbeat',
-        note: null,
-      });
-    }
-    if (heartbeat.length > 0) traceBuffer.push(...heartbeat);
-  }
-
   if (keepaliveIds.length > 0) {
     let firedMod: typeof import('./fired') | null = null;
     try {
