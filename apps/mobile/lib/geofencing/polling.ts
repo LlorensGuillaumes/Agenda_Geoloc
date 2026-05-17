@@ -441,6 +441,42 @@ TaskManager.defineTask<LocationTaskData>(POLLING_TASK, async ({ data, error }) =
   // - Si hay un polling de confirmación activo para el alarmId (event='enter'),
   //   no duplicamos — el polling ya está procesado arriba.
   const keepaliveIds = await readKeepaliveIds();
+
+  // Si Test Mode és actiu, registrem una mostra "heartbeat" per cada
+  // alarma keepalive a cada update — independentment de si la lògica
+  // del proactive entra (els filtres event=exit / repeat=always ho
+  // saltarien). Així veiem totes les distàncies al llarg del temps.
+  if (testModeEnabled && keepaliveIds.length > 0) {
+    const heartbeat: TraceItemInput[] = [];
+    for (const alarmId of keepaliveIds) {
+      const info = await readGeofenceCache(alarmId);
+      if (!info) continue;
+      const dist = distanceMeters(cur, {
+        latitude: info.centerLat,
+        longitude: info.centerLng,
+      });
+      heartbeat.push({
+        ts: tsISO,
+        lat: cur.latitude,
+        lng: cur.longitude,
+        accuracy,
+        alarmId,
+        alarmTitle: info.title,
+        alarmEvent: info.event,
+        alarmRepeat: info.repeat ?? 'once',
+        outerRadius: info.outerRadius,
+        distance: Math.round(dist),
+        insideOuter: dist <= info.outerRadius,
+        lastDistance: null,
+        outsideStreak: null,
+        didFire: false,
+        source: 'heartbeat',
+        note: null,
+      });
+    }
+    if (heartbeat.length > 0) traceBuffer.push(...heartbeat);
+  }
+
   if (keepaliveIds.length > 0) {
     let firedMod: typeof import('./fired') | null = null;
     try {
