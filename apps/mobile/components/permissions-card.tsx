@@ -1,10 +1,11 @@
 import { useCallback, useState } from 'react';
-import { Linking, Pressable, Text, View } from 'react-native';
+import { Alert, Linking, Pressable, Text, View } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import * as Notifications from 'expo-notifications';
 import {
+  getGeofenceDiagnostic,
   getLocationPermissionState,
   isGeofencingActive,
   requestLocationPermissions,
@@ -132,6 +133,22 @@ export function PermissionsCard() {
           {t('settings.permissions.alwaysHelp')}
         </Text>
       )}
+
+      <Pressable
+        onPress={async () => {
+          const d = await getGeofenceDiagnostic();
+          Alert.alert(
+            'Diagnòstic geofencing',
+            `Geofence task: ${d.geofenceTaskStarted ? '✅' : '❌'}\n` +
+              `Location task: ${d.locationTaskStarted ? '✅' : '❌'}\n` +
+              `Keepalive alarms: ${d.keepaliveCount}\n` +
+              `Cache entries: ${d.geofenceCacheKeys}`,
+          );
+        }}
+        className="mt-3 border border-gray-300 rounded-lg py-2 items-center active:bg-gray-100"
+      >
+        <Text className="text-xs text-gray-700">Diagnòstic geofencing</Text>
+      </Pressable>
     </View>
   );
 }

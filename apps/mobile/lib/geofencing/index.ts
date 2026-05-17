@@ -413,3 +413,49 @@ export async function isGeofencingActive(): Promise<boolean> {
     return false;
   }
 }
+
+/**
+ * Estat intern dels serveis per a debugging. Útil quan l'usuari no veu la
+ * notificació "Vigilando N lugares" i volem saber si el location task està
+ * realment arrencat.
+ */
+export async function getGeofenceDiagnostic(): Promise<{
+  geofenceTaskStarted: boolean;
+  locationTaskStarted: boolean;
+  keepaliveCount: number;
+  geofenceCacheKeys: number;
+}> {
+  let geofenceTaskStarted = false;
+  let locationTaskStarted = false;
+  try {
+    geofenceTaskStarted = await Location.hasStartedGeofencingAsync(GEOFENCE_TASK);
+  } catch {
+    // ignore
+  }
+  try {
+    locationTaskStarted = await Location.hasStartedLocationUpdatesAsync(
+      'agenda.location-polling-task',
+    );
+  } catch {
+    // ignore
+  }
+  let keepaliveCount = 0;
+  let geofenceCacheKeys = 0;
+  try {
+    const raw = await AsyncStorage.getItem('keepalive:active');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) keepaliveCount = parsed.length;
+    }
+    const keys = await AsyncStorage.getAllKeys();
+    geofenceCacheKeys = keys.filter((k) => k.startsWith(CACHE_PREFIX)).length;
+  } catch {
+    // ignore
+  }
+  return {
+    geofenceTaskStarted,
+    locationTaskStarted,
+    keepaliveCount,
+    geofenceCacheKeys,
+  };
+}
