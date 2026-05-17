@@ -40,7 +40,11 @@ const POLLING_PREFIX = 'polling:';
 const KEEPALIVE_KEY = 'keepalive:active';
 
 const CONFIRM_TIMEOUT_MS = 5 * 60 * 1000;
-const LOCATION_INTERVAL_MS = 30 * 1000;
+// 10s entre location updates quan estàs aturat. Hi havia 30s, però resultava
+// massa poca resolució per detectar transicions ràpides i pel Test Mode el
+// heartbeat surt cada 30s, que dificulta l'anàlisi. 10s pesa poc a bateria
+// (accuracy Balanced) i dona prou granularitat per veure-ho tot.
+const LOCATION_INTERVAL_MS = 10 * 1000;
 
 type LatLng = { latitude: number; longitude: number };
 
