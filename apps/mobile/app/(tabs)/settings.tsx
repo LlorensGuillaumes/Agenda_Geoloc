@@ -5,6 +5,7 @@ import { Link } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '@/lib/auth/store';
 import { PermissionsCard } from '@/components/permissions-card';
+import { UpdatesStatusCard } from '@/components/updates-status-card';
 import { useFriendRequests } from '@/lib/friends/hooks';
 
 export default function SettingsScreen() {
@@ -61,6 +62,8 @@ export default function SettingsScreen() {
         </Link>
 
         <PermissionsCard />
+
+        <UpdatesStatusCard />
 
         <Pressable
           onPress={() => signOut()}
