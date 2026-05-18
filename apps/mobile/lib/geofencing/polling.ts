@@ -551,12 +551,16 @@ TaskManager.defineTask<LocationTaskData>(POLLING_TASK, async ({ data, error }) =
             continue;
           }
           if (info.repeat === 'always') {
-            const recentRaw = await AsyncStorage.getItem(
-              `recent-fired:${alarmId}:exit`,
-            );
+            const recentKey = `recent-fired:${alarmId}:exit`;
+            const recentRaw = await AsyncStorage.getItem(recentKey);
             if (recentRaw) {
               const ts = Number(recentRaw);
-              if (Number.isFinite(ts) && Date.now() - ts < 60_000) continue;
+              if (Number.isFinite(ts) && Date.now() - ts < 60_000) {
+                // Bloquejat però estenem el timer (sliding window) per
+                // absorbir oscil·lacions llargues.
+                await AsyncStorage.setItem(recentKey, String(Date.now())).catch(() => {});
+                continue;
+              }
             }
           }
 

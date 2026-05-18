@@ -191,18 +191,24 @@ TaskManager.defineTask<GeofenceTaskData>(GEOFENCE_TASK, async ({ data, error }) 
     return;
   }
 
-  // Debounce de 60s: GMS pot disparar el mateix event diverses vegades en
-  // pocs segons quan el GPS oscil·la al borde del cercle (típic amb radis
-  // petits). Sense aquest filtre, "Surts" pot rebotar fins a saturar les
-  // notificacions. Per a `repeat='once'` no cal (el fired flag ja bloqueja);
-  // per a `always` sí.
+  // Debounce de 60s amb sliding window: GMS pot disparar el mateix event
+  // diverses vegades en pocs segons quan el GPS oscil·la al borde del cercle
+  // (típic amb radis petits). Cada intent (encara que el filtrem) ESTÉN el
+  // timer 60s més enllà — així si el GPS segueix botant, mai s'arriba a fer
+  // una segona fire. Si l'usuari realment surt i torna després de 60s de
+  // silenci, el timer haurà caducat i la nova fire passarà.
+  // Per a `repeat='once'` no cal (el fired flag ja bloqueja); per a `always` sí.
   const recentKey = `recent-fired:${region.identifier}:${isEnter ? 'enter' : 'exit'}`;
   const RECENT_TTL_MS = 60 * 1000;
   try {
     const raw = await AsyncStorage.getItem(recentKey);
     if (raw) {
       const ts = Number(raw);
-      if (Number.isFinite(ts) && Date.now() - ts < RECENT_TTL_MS) return;
+      if (Number.isFinite(ts) && Date.now() - ts < RECENT_TTL_MS) {
+        // Bloquejat però estenem el timer per absorbir oscil·lacions llargues
+        await AsyncStorage.setItem(recentKey, String(Date.now())).catch(() => {});
+        return;
+      }
     }
   } catch {
     // ignore
