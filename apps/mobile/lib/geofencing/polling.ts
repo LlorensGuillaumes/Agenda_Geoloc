@@ -550,17 +550,17 @@ TaskManager.defineTask<LocationTaskData>(POLLING_TASK, async ({ data, error }) =
           if (info.activeWindow && !isInsideActiveWindow(info.activeWindow)) {
             continue;
           }
-          if (info.repeat === 'always') {
-            const recentKey = `recent-fired:${alarmId}:exit`;
-            const recentRaw = await AsyncStorage.getItem(recentKey);
-            if (recentRaw) {
-              const ts = Number(recentRaw);
-              if (Number.isFinite(ts) && Date.now() - ts < 60_000) {
-                // Bloquejat però estenem el timer (sliding window) per
-                // absorbir oscil·lacions llargues.
-                await AsyncStorage.setItem(recentKey, String(Date.now())).catch(() => {});
-                continue;
-              }
+          // Debounce de 60s aplicable a TOTS els repeats. Per a 'once' també
+          // serveix com a lock anti-race entre invocacions paral·leles del
+          // task abans que el fired flag s'escrigui. Sliding window: cada
+          // intent bloquejat estén el timer.
+          const recentExitKey = `recent-fired:${alarmId}:exit`;
+          const recentExitRaw = await AsyncStorage.getItem(recentExitKey);
+          if (recentExitRaw) {
+            const ts = Number(recentExitRaw);
+            if (Number.isFinite(ts) && Date.now() - ts < 60_000) {
+              await AsyncStorage.setItem(recentExitKey, String(Date.now())).catch(() => {});
+              continue;
             }
           }
 
@@ -634,15 +634,18 @@ TaskManager.defineTask<LocationTaskData>(POLLING_TASK, async ({ data, error }) =
             continue;
           }
 
+          // Marca recent-fired ABANS de la notificació per minimitzar la
+          // finestra de race entre invocacions paral·leles del task.
+          await AsyncStorage.setItem(recentExitKey, String(Date.now()));
+          // Neteja wasInside: per disparar de nou caldrà tornar a entrar al
+          // cercle primer. Sense això, mentre l'usuari es manté fora, cada
+          // 60s tornaria a disparar (perquè es continuaria veient clearly
+          // outside amb streak suficient).
+          await AsyncStorage.removeItem(wasInsideKey);
           await fireProactiveNotification(alarmId, info, 'exit');
           await AsyncStorage.removeItem(exitStreakKey);
           if (info.repeat === 'once') {
             await firedMod.markAlarmFired(alarmId, 'once');
-          } else {
-            await AsyncStorage.setItem(
-              `recent-fired:${alarmId}:exit`,
-              String(Date.now()),
-            );
           }
           if (testModeEnabled) {
             traceBuffer.push({
