@@ -11,6 +11,7 @@ import {
   setKeepaliveAlarms,
   startConfirmation,
 } from './polling';
+import { isTrackingGeofenceActive } from './tracking';
 import {
   clearAllFiredFlags,
   isAlarmFired,
@@ -460,11 +461,13 @@ export async function isGeofencingActive(): Promise<boolean> {
 export async function getGeofenceDiagnostic(): Promise<{
   geofenceTaskStarted: boolean;
   locationTaskStarted: boolean;
+  trackingTaskStarted: boolean;
   keepaliveCount: number;
   geofenceCacheKeys: number;
 }> {
   let geofenceTaskStarted = false;
   let locationTaskStarted = false;
+  let trackingTaskStarted = false;
   try {
     geofenceTaskStarted = await Location.hasStartedGeofencingAsync(GEOFENCE_TASK);
   } catch {
@@ -474,6 +477,11 @@ export async function getGeofenceDiagnostic(): Promise<{
     locationTaskStarted = await Location.hasStartedLocationUpdatesAsync(
       'agenda.location-polling-task',
     );
+  } catch {
+    // ignore
+  }
+  try {
+    trackingTaskStarted = await isTrackingGeofenceActive();
   } catch {
     // ignore
   }
@@ -493,6 +501,7 @@ export async function getGeofenceDiagnostic(): Promise<{
   return {
     geofenceTaskStarted,
     locationTaskStarted,
+    trackingTaskStarted,
     keepaliveCount,
     geofenceCacheKeys,
   };

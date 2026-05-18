@@ -203,6 +203,7 @@ export function PermissionsCard() {
             'Diagnòstic geofencing',
             `Geofence task: ${d.geofenceTaskStarted ? '✅' : '❌'}\n` +
               `Location task: ${d.locationTaskStarted ? '✅' : '❌'}\n` +
+              `Tracking task: ${d.trackingTaskStarted ? '✅' : '❌'}\n` +
               `Keepalive alarms: ${d.keepaliveCount}\n` +
               `Cache entries: ${d.geofenceCacheKeys}`,
           );

@@ -34,6 +34,7 @@ import {
   sendTraceBatch,
 } from '../testing/traces';
 import type { TraceItemInput } from '@agenda/shared';
+import { stopTrackingGeofence, updateTrackingGeofence } from './tracking';
 
 export const POLLING_TASK = 'agenda.location-polling-task';
 const POLLING_PREFIX = 'polling:';
@@ -180,6 +181,9 @@ async function reconcileLocationTask(): Promise<void> {
     await startLocationTask(body);
   } else {
     await stopLocationTask();
+    // Sense alarmes a vigilar, tampoc necessitem la tracking geofence:
+    // no aportaria res i consumiria una geofence slot.
+    await stopTrackingGeofence();
   }
 }
 
@@ -263,6 +267,7 @@ export async function clearAllPolling(): Promise<void> {
   if (toRemove.length > 0) await AsyncStorage.multiRemove(toRemove);
   await AsyncStorage.removeItem(KEEPALIVE_KEY);
   await stopLocationTask();
+  await stopTrackingGeofence();
 }
 
 // Cache de geofence guardado por `syncGeofences` para cada alarma. Definimos
@@ -364,6 +369,13 @@ TaskManager.defineTask<LocationTaskData>(POLLING_TASK, async ({ data, error }) =
     longitude: last.coords.longitude,
   };
   const lowAccuracy = accuracy > MAX_ACCURACY_M;
+
+  // Rolling tracking geofence: re-centrar a la posició actual si ens hem
+  // mogut prou. Així GMS ens despertarà quan caminem encara que el procés
+  // estigui mort. Idempotent.
+  if (!lowAccuracy) {
+    updateTrackingGeofence(cur.latitude, cur.longitude).catch(() => {});
+  }
 
   // Emet heartbeat de TOTES les keepalive alarms abans del filtre d'accuracy
   // — així podem inspeccionar a la BD també les mostres descartades i veure
