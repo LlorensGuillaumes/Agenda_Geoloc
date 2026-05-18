@@ -8,9 +8,19 @@
  * ja li hem demanat i no tornem a empipar tret que ell ho demani.
  */
 import { Platform } from 'react-native';
-import * as IntentLauncher from 'expo-intent-launcher';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
+
+// Càrrega lazy: si l'APK és antic i no té el mòdul natiu instal·lat, no
+// volem cruixir al carregar el mòdul (que petaria tota la pantalla d'Ajustos
+// al usuari amb APK desactualitzat fins que apliqui un OTA).
+async function getIntentLauncher() {
+  try {
+    return await import('expo-intent-launcher');
+  } catch {
+    return null;
+  }
+}
 
 type Manufacturer = 'xiaomi' | 'huawei' | 'oppo' | 'vivo' | 'samsung' | 'other';
 
@@ -38,6 +48,8 @@ export function getManufacturer(): Manufacturer {
  */
 export async function requestIgnoreBatteryOptimization(): Promise<void> {
   if (Platform.OS !== 'android') return;
+  const IntentLauncher = await getIntentLauncher();
+  if (!IntentLauncher) return;
   const appId = Constants.expoConfig?.android?.package ?? 'dev.llorensguillaumes.agenda';
   await IntentLauncher.startActivityAsync(
     IntentLauncher.ActivityAction.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
@@ -51,6 +63,8 @@ export async function requestIgnoreBatteryOptimization(): Promise<void> {
  */
 export async function openBatteryOptimizationList(): Promise<void> {
   if (Platform.OS !== 'android') return;
+  const IntentLauncher = await getIntentLauncher();
+  if (!IntentLauncher) return;
   await IntentLauncher.startActivityAsync(
     IntentLauncher.ActivityAction.IGNORE_BATTERY_OPTIMIZATION_SETTINGS,
   );
@@ -64,6 +78,8 @@ export async function openBatteryOptimizationList(): Promise<void> {
  */
 export async function openAutostartSettings(): Promise<boolean> {
   if (Platform.OS !== 'android') return false;
+  const IntentLauncher = await getIntentLauncher();
+  if (!IntentLauncher) return false;
   const targets: { packageName: string; className: string }[] = [];
   const m = getManufacturer();
   if (m === 'xiaomi') {
@@ -131,6 +147,8 @@ export function hasManufacturerHardening(): boolean {
  */
 export async function openAppDetailSettings(): Promise<void> {
   if (Platform.OS !== 'android') return;
+  const IntentLauncher = await getIntentLauncher();
+  if (!IntentLauncher) return;
   const appId = Constants.expoConfig?.android?.package ?? 'dev.llorensguillaumes.agenda';
   await IntentLauncher.startActivityAsync(
     IntentLauncher.ActivityAction.APPLICATION_DETAILS_SETTINGS,
@@ -146,6 +164,8 @@ export async function openAppDetailSettings(): Promise<void> {
 export async function openMiuiOtherPermissions(): Promise<boolean> {
   if (Platform.OS !== 'android') return false;
   if (getManufacturer() !== 'xiaomi') return false;
+  const IntentLauncher = await getIntentLauncher();
+  if (!IntentLauncher) return false;
   const appId = Constants.expoConfig?.android?.package ?? 'dev.llorensguillaumes.agenda';
   const targets: { packageName: string; className: string; extra?: Record<string, unknown> }[] = [
     {
@@ -180,6 +200,8 @@ export async function openMiuiOtherPermissions(): Promise<boolean> {
 export async function openMiuiBatterySaver(): Promise<boolean> {
   if (Platform.OS !== 'android') return false;
   if (getManufacturer() !== 'xiaomi') return false;
+  const IntentLauncher = await getIntentLauncher();
+  if (!IntentLauncher) return false;
   const appId = Constants.expoConfig?.android?.package ?? 'dev.llorensguillaumes.agenda';
   try {
     await IntentLauncher.startActivityAsync(
