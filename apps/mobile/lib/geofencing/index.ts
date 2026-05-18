@@ -27,6 +27,13 @@ export const GEOFENCE_TASK = 'agenda.geofence-task';
 const CACHE_PREFIX = 'geofence:';
 const IOS_GEOFENCE_LIMIT = 20;
 
+// GMS dispara un ENTER artificial al cridar startGeofencingAsync si l'usuari
+// ja és dins de la regió. Marquem el timestamp del registre per descartar els
+// ENTER que arriben dins d'aquesta finestra (s'apliquen només als camins de
+// fire directe; per `enter+once` el polling+streak ja ho filtra).
+const REGISTER_COOLDOWN_KEY = 'geofence-registered-at';
+const REGISTER_COOLDOWN_MS = 30 * 1000;
+
 /**
  * Ratio del radio externo del geofence que se considera "centro" para la
  * confirmación con polling. Ej. con radio externo 100m → confirmación a 30m.
@@ -124,6 +131,25 @@ TaskManager.defineTask<GeofenceTaskData>(GEOFENCE_TASK, async ({ data, error }) 
 
   // Filtrar por ventana horaria si está definida.
   if (info?.activeWindow && !isInsideActiveWindow(info.activeWindow)) return;
+
+  // Cooldown post-registre: si l'ENTER arriba dins els primers segons després
+  // d'un `startGeofencingAsync`, és el ENTER artificial que GMS sempre dispara
+  // quan l'usuari ja és dins de la regió al registrar. Filtrar només camins
+  // de fire directe — `enter+once` passa pel polling, que ja té edge-detection.
+  const goesToPolling = isEnter && info?.event === 'enter' && info.repeat !== 'always';
+  if (isEnter && !goesToPolling) {
+    try {
+      const raw = await AsyncStorage.getItem(REGISTER_COOLDOWN_KEY);
+      if (raw) {
+        const ts = Number(raw);
+        if (Number.isFinite(ts) && Date.now() - ts < REGISTER_COOLDOWN_MS) {
+          return;
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }
 
   // Caminos según evento + repeat:
   //
@@ -324,6 +350,11 @@ export async function syncGeofences(input: {
       GEOFENCE_TASK,
       limited.map((c) => c.region),
     );
+    try {
+      await AsyncStorage.setItem(REGISTER_COOLDOWN_KEY, String(Date.now()));
+    } catch {
+      // ignore
+    }
   }
 
   // Mantener el location service vivo mientras haya alarmas activas.

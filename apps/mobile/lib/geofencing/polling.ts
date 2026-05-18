@@ -543,6 +543,16 @@ TaskManager.defineTask<LocationTaskData>(POLLING_TASK, async ({ data, error }) =
         const proactiveStreakRaw = await AsyncStorage.getItem(proactiveStreakKey);
         let proactiveStreak = proactiveStreakRaw ? Number(proactiveStreakRaw) : 0;
 
+        // Reset del streak si estem clarament dins (50% del trigger). Així una
+        // sortida incompleta d'una sessió prèvia (l'usuari va a passeig curt i
+        // torna abans que streak arribi a 2) no deixa residu al storage que
+        // anul·li la defensa anti-oscil·lació al següent cross-in.
+        const clearlyInsideProactive = dist <= triggerDist * 0.5;
+        if (clearlyInsideProactive && proactiveStreak > 0) {
+          await AsyncStorage.removeItem(proactiveStreakKey);
+          proactiveStreak = 0;
+        }
+
         const clearlyOutsideProactive = dist > triggerDist + PROACTIVE_EXIT_MARGIN_M;
         const traceBase: TraceItemInput = {
           ts: tsISO,
@@ -570,6 +580,23 @@ TaskManager.defineTask<LocationTaskData>(POLLING_TASK, async ({ data, error }) =
               ...traceBase,
               outsideStreak: proactiveStreak,
               note: 'clearly outside, streak++',
+            });
+          }
+          continue;
+        }
+        // Reset si clarament dins: neteja streaks legacy d'oscil·lacions
+        // puntuals o de sortides anteriors que no van completar el cicle.
+        // Sense això, el streak podia quedar a 1 indefinidament entre
+        // sessions, fent que un sol cross-out futur ja disparés.
+        const clearlyInsideProactive = dist < Math.max(0, triggerDist - 10);
+        if (clearlyInsideProactive && proactiveStreak > 0) {
+          await AsyncStorage.removeItem(proactiveStreakKey);
+          proactiveStreak = 0;
+          if (testModeEnabled) {
+            traceBuffer.push({
+              ...traceBase,
+              outsideStreak: 0,
+              note: 'clearly inside, streak reset',
             });
           }
           continue;
