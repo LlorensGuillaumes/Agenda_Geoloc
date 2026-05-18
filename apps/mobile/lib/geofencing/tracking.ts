@@ -19,7 +19,6 @@ import { ensureLocationTaskRunning } from './polling';
 export const TRACKING_TASK = 'agenda.tracking-geofence-task';
 const TRACKING_ID = '__tracking__';
 const TRACKING_RADIUS_M = 80;
-const TRACKING_MIN_MOVE_M = 40; // re-registra quan ens hem mogut > 40m
 const TRACKING_CENTER_KEY = 'tracking:center';
 
 type TrackingTaskData = {
@@ -27,11 +26,16 @@ type TrackingTaskData = {
   region: Location.LocationRegion;
 };
 
-// Definició del handler. L'única feina és cridar el rescat — quan el
-// location task arrenqui, ja registrarà la tracking geofence a la nova
-// posició via updateTrackingGeofence().
+// Handler de la tracking geofence. Quan GMS dispara EXIT (l'usuari s'ha
+// allunyat 80m del centre actual), netegem el centre i revivim el location
+// task. La pròxima mostra de GPS registrarà una nova geofence al nou centre.
 TaskManager.defineTask<TrackingTaskData>(TRACKING_TASK, async ({ error }) => {
   if (error) return;
+  try {
+    await AsyncStorage.removeItem(TRACKING_CENTER_KEY);
+  } catch {
+    // ignore
+  }
   try {
     await ensureLocationTaskRunning();
   } catch {
@@ -39,31 +43,17 @@ TaskManager.defineTask<TrackingTaskData>(TRACKING_TASK, async ({ error }) => {
   }
 });
 
-function haversine(
-  lat1: number,
-  lng1: number,
-  lat2: number,
-  lng2: number,
-): number {
-  const R = 6371000;
-  const toRad = (d: number) => (d * Math.PI) / 180;
-  const dLat = toRad(lat2 - lat1);
-  const dLng = toRad(lng2 - lng1);
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRad(lat1)) *
-      Math.cos(toRad(lat2)) *
-      Math.sin(dLng / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
-
 /**
- * Crida idempotent: si l'usuari s'ha mogut prou de l'anterior centre,
- * re-registra la geofence al nou centre. Si no, no fa res.
+ * Idempotent: si NO hi ha cap tracking center registrat, en registra un al
+ * punt donat amb radi 80m. Si ja n'hi ha un, no fa res.
  *
- * Cridar des del location polling task amb cada mostra de GPS.
+ * El propòsit és que la geofence quedi estable un cop creada. Cada
+ * re-registre fa que GMS hagi de tornar a calibrar (30-90s); si actualitzem
+ * cada sample, GMS no té temps d'arribar a disparar EXIT abans que la
+ * geofence canviï. Ara la geofence queda en repòs fins que GMS la dispara,
+ * el handler neteja el centre, i el següent sample n'estableix una de nova.
  */
-export async function updateTrackingGeofence(
+export async function ensureTrackingGeofence(
   lat: number,
   lng: number,
 ): Promise<void> {
@@ -72,11 +62,7 @@ export async function updateTrackingGeofence(
 
   try {
     const raw = await AsyncStorage.getItem(TRACKING_CENTER_KEY);
-    if (raw) {
-      const prev = JSON.parse(raw) as { lat: number; lng: number };
-      const dist = haversine(lat, lng, prev.lat, prev.lng);
-      if (dist < TRACKING_MIN_MOVE_M) return;
-    }
+    if (raw) return; // ja hi ha una geofence — no toquem fins que dispari
   } catch {
     // ignore
   }
@@ -97,8 +83,7 @@ export async function updateTrackingGeofence(
       JSON.stringify({ lat, lng }),
     );
   } catch {
-    // Si fa fallida (p.ex. permisos), no insistim — la pròxima mostra
-    // ho tornarà a provar.
+    // ignore — el següent sample tornarà a provar
   }
 }
 

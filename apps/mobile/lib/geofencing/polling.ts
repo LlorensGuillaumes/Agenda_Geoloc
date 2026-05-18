@@ -34,7 +34,7 @@ import {
   sendTraceBatch,
 } from '../testing/traces';
 import type { TraceItemInput } from '@agenda/shared';
-import { stopTrackingGeofence, updateTrackingGeofence } from './tracking';
+import { ensureTrackingGeofence, stopTrackingGeofence } from './tracking';
 
 export const POLLING_TASK = 'agenda.location-polling-task';
 const POLLING_PREFIX = 'polling:';
@@ -370,11 +370,12 @@ TaskManager.defineTask<LocationTaskData>(POLLING_TASK, async ({ data, error }) =
   };
   const lowAccuracy = accuracy > MAX_ACCURACY_M;
 
-  // Rolling tracking geofence: re-centrar a la posició actual si ens hem
-  // mogut prou. Així GMS ens despertarà quan caminem encara que el procés
-  // estigui mort. Idempotent.
+  // Tracking geofence: només la registrem si no hi ha cap activa. La
+  // deixem en repòs perquè GMS tingui temps de detectar EXIT (necessita
+  // 30-90s de calibratge). Quan dispari, el seu handler netejarà el centre
+  // i la pròxima mostra establirà una de nova al nou punt.
   if (!lowAccuracy) {
-    updateTrackingGeofence(cur.latitude, cur.longitude).catch(() => {});
+    ensureTrackingGeofence(cur.latitude, cur.longitude).catch(() => {});
   }
 
   // Emet heartbeat de TOTES les keepalive alarms abans del filtre d'accuracy
