@@ -326,7 +326,7 @@ function isInsideActiveWindow(
 async function fireProactiveNotification(
   alarmId: string,
   info: GeofenceCache,
-  eventType: 'nearby' | 'enter',
+  eventType: 'nearby' | 'enter' | 'exit',
 ): Promise<void> {
   const contactData = buildContactData(info.notifyConfig);
   const hasActions = (info.notifyConfig?.actions?.length ?? 0) > 0;
@@ -541,15 +541,123 @@ TaskManager.defineTask<LocationTaskData>(POLLING_TASK, async ({ data, error }) =
         if (await firedMod.isAlarmFired(alarmId)) continue;
         const info = await readGeofenceCache(alarmId);
         if (!info) continue;
-        if (info.event === 'exit') continue;
+
+        // Branca exit proactiu: si GMS no entrega l'EXIT natiu (típic a
+        // Xiaomi quan el procés ha estat mort i ressuscitat), aprofitem el
+        // polling per disparar. Cal streak per evitar oscil·lacions GPS, i
+        // "wasInside" perquè no dispari si l'alarma es crea estant ja fora.
+        if (info.event === 'exit') {
+          if (info.activeWindow && !isInsideActiveWindow(info.activeWindow)) {
+            continue;
+          }
+          if (info.repeat === 'always') {
+            const recentRaw = await AsyncStorage.getItem(
+              `recent-fired:${alarmId}:exit`,
+            );
+            if (recentRaw) {
+              const ts = Number(recentRaw);
+              if (Number.isFinite(ts) && Date.now() - ts < 60_000) continue;
+            }
+          }
+
+          const dist = distanceMeters(cur, {
+            latitude: info.centerLat,
+            longitude: info.centerLng,
+          });
+          const EXIT_OUTSIDE_MARGIN_M = 30;
+          const wasInsideKey = `exit-was-inside:${alarmId}`;
+          const exitStreakKey = `exit-outside-streak:${alarmId}`;
+          const clearlyInside = dist <= info.outerRadius - 10;
+          const clearlyOutside =
+            dist > info.outerRadius + EXIT_OUTSIDE_MARGIN_M;
+
+          const traceBaseExit: TraceItemInput = {
+            ts: tsISO,
+            lat: cur.latitude,
+            lng: cur.longitude,
+            accuracy,
+            alarmId,
+            alarmTitle: info.title,
+            alarmEvent: 'exit',
+            alarmRepeat: info.repeat ?? 'once',
+            outerRadius: info.outerRadius,
+            distance: Math.round(dist),
+            insideOuter: dist <= info.outerRadius,
+            lastDistance: null,
+            outsideStreak: null,
+            didFire: false,
+            source: 'proactive-exit',
+            note: null,
+          };
+
+          if (clearlyInside) {
+            await AsyncStorage.setItem(wasInsideKey, '1');
+            await AsyncStorage.removeItem(exitStreakKey);
+            continue;
+          }
+
+          if (!clearlyOutside) {
+            if (testModeEnabled) {
+              traceBuffer.push({ ...traceBaseExit, note: 'exit buffer zone' });
+            }
+            continue;
+          }
+
+          const wasInside = await AsyncStorage.getItem(wasInsideKey);
+          if (!wasInside) {
+            if (testModeEnabled) {
+              traceBuffer.push({
+                ...traceBaseExit,
+                note: 'outside but never seen inside',
+              });
+            }
+            continue;
+          }
+
+          const streakRaw = await AsyncStorage.getItem(exitStreakKey);
+          let exitStreak = streakRaw ? Number(streakRaw) : 0;
+          exitStreak += 1;
+          await AsyncStorage.setItem(exitStreakKey, String(exitStreak));
+
+          if (exitStreak < OUTSIDE_STREAK_NEEDED) {
+            if (testModeEnabled) {
+              traceBuffer.push({
+                ...traceBaseExit,
+                outsideStreak: exitStreak,
+                note: `exit streak ${exitStreak} < ${OUTSIDE_STREAK_NEEDED}`,
+              });
+            }
+            continue;
+          }
+
+          await fireProactiveNotification(alarmId, info, 'exit');
+          await AsyncStorage.removeItem(exitStreakKey);
+          if (info.repeat === 'once') {
+            await firedMod.markAlarmFired(alarmId, 'once');
+          } else {
+            await AsyncStorage.setItem(
+              `recent-fired:${alarmId}:exit`,
+              String(Date.now()),
+            );
+          }
+          if (testModeEnabled) {
+            traceBuffer.push({
+              ...traceBaseExit,
+              outsideStreak: exitStreak,
+              didFire: true,
+              note: 'FIRED (proactive-exit)',
+            });
+          }
+          continue;
+        }
+
         if (info.repeat === 'always') continue;
-        // Si hay polling de confirmación en curso para este alarm, no dispares
-        // a la vez — el polling lo cubre cuando confirme.
-        const pollingActive = await AsyncStorage.getItem(
-          `${POLLING_PREFIX}${alarmId}`,
-        );
-        if (pollingActive) continue;
         if (info.activeWindow && !isInsideActiveWindow(info.activeWindow)) continue;
+        // NOTA: NO saltem aquí si hi ha polling de confirmació actiu. Si la
+        // proactive ja té streak suficient (l'usuari realment va sortir i
+        // torna), la cross-in és real i hem de disparar encara que GMS hagi
+        // iniciat un polling al detectar ENTER natiu. Si no, en el moment
+        // FIRE més avall netegem la entry de polling per evitar duplicats.
 
         const dist = distanceMeters(cur, {
           latitude: info.centerLat,
@@ -654,6 +762,9 @@ TaskManager.defineTask<LocationTaskData>(POLLING_TASK, async ({ data, error }) =
           continue;
         }
         await AsyncStorage.removeItem(proactiveStreakKey);
+        // Neteja qualsevol polling de confirmació pendent — la proactive ja
+        // ha disparat, no volem que Path 1 hi torni més tard amb duplicat.
+        await removePollingEntry(alarmId);
 
         // Transició fora → dins: dispara
         await fireProactiveNotification(
