@@ -658,8 +658,20 @@ TaskManager.defineTask<LocationTaskData>(POLLING_TASK, async ({ data, error }) =
           continue;
         }
 
-        if (info.repeat === 'always') continue;
         if (info.activeWindow && !isInsideActiveWindow(info.activeWindow)) continue;
+        // Debounce sliding de 60s aplicable a TOTS els repeats — per a
+        // 'always' evita rebots quan GPS oscil·la al borde, per a 'once'
+        // serveix com a lock anti-race entre invocacions paral·leles abans
+        // que el fired flag s'escrigui.
+        const recentEnterKey = `recent-fired:${alarmId}:${info.event === 'nearby' ? 'nearby' : 'enter'}`;
+        const recentEnterRaw = await AsyncStorage.getItem(recentEnterKey);
+        if (recentEnterRaw) {
+          const ts = Number(recentEnterRaw);
+          if (Number.isFinite(ts) && Date.now() - ts < 60_000) {
+            await AsyncStorage.setItem(recentEnterKey, String(Date.now())).catch(() => {});
+            continue;
+          }
+        }
         // NOTA: NO saltem aquí si hi ha polling de confirmació actiu. Si la
         // proactive ja té streak suficient (l'usuari realment va sortir i
         // torna), la cross-in és real i hem de disparar encara que GMS hagi
@@ -768,6 +780,9 @@ TaskManager.defineTask<LocationTaskData>(POLLING_TASK, async ({ data, error }) =
           }
           continue;
         }
+        // Marca recent-fired ABANS de la notificació per minimitzar el race
+        // window entre invocacions paral·leles del task.
+        await AsyncStorage.setItem(recentEnterKey, String(Date.now()));
         await AsyncStorage.removeItem(proactiveStreakKey);
         // Neteja qualsevol polling de confirmació pendent — la proactive ja
         // ha disparat, no volem que Path 1 hi torni més tard amb duplicat.
@@ -779,7 +794,9 @@ TaskManager.defineTask<LocationTaskData>(POLLING_TASK, async ({ data, error }) =
           info,
           info.event === 'nearby' ? 'nearby' : 'enter',
         );
-        await firedMod.markAlarmFired(alarmId, info.repeat);
+        if (info.repeat === 'once') {
+          await firedMod.markAlarmFired(alarmId, 'once');
+        }
         if (testModeEnabled) {
           traceBuffer.push({
             ...traceBase,
