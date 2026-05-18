@@ -619,31 +619,33 @@ TaskManager.defineTask<LocationTaskData>(POLLING_TASK, async ({ data, error }) =
           }
           continue;
         }
-        // Reset si clarament dins: neteja streaks legacy d'oscil·lacions
-        // puntuals o de sortides anteriors que no van completar el cicle.
-        // Sense això, el streak podia quedar a 1 indefinidament entre
-        // sessions, fent que un sol cross-out futur ja disparés.
-        const clearlyInsideProactive = dist < Math.max(0, triggerDist - 10);
-        if (clearlyInsideProactive && proactiveStreak > 0) {
-          await AsyncStorage.removeItem(proactiveStreakKey);
-          proactiveStreak = 0;
-          if (testModeEnabled) {
-            traceBuffer.push({
-              ...traceBase,
-              outsideStreak: 0,
-              note: 'clearly inside, streak reset',
-            });
-          }
-          continue;
-        }
+        // Si encara estem clarament fora del trigger circle, no és cross-in.
         if (dist > triggerDist) {
           if (testModeEnabled) {
             traceBuffer.push({ ...traceBase, note: 'buffer zone (no fire)' });
           }
           continue;
         }
+        // Som dins del trigger circle. Si tenim streak suficient → FIRE,
+        // sigui clarament dins o a la franja de buffer. Comprovem això
+        // ABANS de cap reset perquè una tornada ràpida (de 70m a 7m entre
+        // dues mostres) podria saltar-se la franja intermèdia i passar
+        // directament al "clearly inside" — perdríem el fire.
         if (proactiveStreak < OUTSIDE_STREAK_NEEDED) {
-          if (testModeEnabled) {
+          // Streak baix: si estem clarament dins, neteja el legacy d'una
+          // oscil·lació puntual o sortida anterior incompleta. Si no,
+          // simplement no disparem encara.
+          const clearlyInsideProactive = dist < Math.max(0, triggerDist - 10);
+          if (clearlyInsideProactive && proactiveStreak > 0) {
+            await AsyncStorage.removeItem(proactiveStreakKey);
+            if (testModeEnabled) {
+              traceBuffer.push({
+                ...traceBase,
+                outsideStreak: 0,
+                note: 'clearly inside, streak reset',
+              });
+            }
+          } else if (testModeEnabled) {
             traceBuffer.push({
               ...traceBase,
               note: `inside but streak ${proactiveStreak} < ${OUTSIDE_STREAK_NEEDED}`,
