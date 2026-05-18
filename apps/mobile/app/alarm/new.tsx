@@ -31,6 +31,7 @@ import { useCreateAlarm } from '@/lib/alarms/hooks';
 import { usePlaces, useSharedWithMePlaces } from '@/lib/places/hooks';
 import { useFriends } from '@/lib/friends/hooks';
 import { scheduleAlarmNotification } from '@/lib/notifications';
+import { maybePromptHardening } from '@/lib/alarms/hardening-prompt';
 import { GeofenceMap, type LatLng } from '@/components/geofence-map';
 import { ContactPickerModal } from '@/components/contact-picker-modal';
 
@@ -402,6 +403,13 @@ export default function NewAlarmScreen() {
           timeConfig,
           notifyConfig: created.notifyConfig,
         });
+      }
+
+      // Si la nova alarma té geofencing i és per a nosaltres, oferim els
+      // permisos de "resistència a segon pla" la primera vegada. Si ja els
+      // ha vist, no apareix res.
+      if (!isCrossAgenda && includesLocation) {
+        await maybePromptHardening();
       }
 
       router.back();

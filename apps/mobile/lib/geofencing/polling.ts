@@ -149,6 +149,7 @@ async function startLocationTask(notificationBody: string): Promise<void> {
       notificationTitle: 'Agenda',
       notificationBody,
       notificationColor: '#2563EB',
+      killServiceOnDestroy: false,
     },
   });
 }

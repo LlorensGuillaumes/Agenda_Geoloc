@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { Alert, Linking, Pressable, Text, View } from 'react-native';
+import { Alert, Linking, Platform, Pressable, Text, View } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
@@ -13,6 +13,13 @@ import {
   unregisterAllGeofences,
   type LocationPermissionState,
 } from '@/lib/geofencing';
+import {
+  getManufacturer,
+  hasManufacturerHardening,
+  markHardeningPrompted,
+  openAutostartSettings,
+  requestIgnoreBatteryOptimization,
+} from '@/lib/system-hardening';
 
 type NotifStatus = 'granted' | 'denied' | 'undetermined';
 
@@ -136,6 +143,57 @@ export function PermissionsCard() {
         <Text className="text-xs text-gray-500 mt-3 leading-5">
           {t('settings.permissions.alwaysHelp')}
         </Text>
+      )}
+
+      {Platform.OS === 'android' && (
+        <View className="mt-4 pt-3 border-t border-gray-100">
+          <Text className="text-sm font-semibold text-gray-900 mb-1">
+            Resistència a segon pla
+          </Text>
+          <Text className="text-xs text-gray-500 mb-2 leading-5">
+            Cal aquests permisos perquè el sistema no pari el geofencing quan
+            l'app no està en primer pla.
+          </Text>
+
+          <Pressable
+            onPress={async () => {
+              try {
+                await requestIgnoreBatteryOptimization();
+                await markHardeningPrompted();
+              } catch (err) {
+                Alert.alert(
+                  'Error',
+                  err instanceof Error ? err.message : 'Unknown',
+                );
+              }
+            }}
+            className="border border-blue-300 rounded-lg py-2 items-center active:bg-blue-50 mb-2"
+          >
+            <Text className="text-xs text-blue-700 font-medium">
+              Exempció d'optimització de bateria
+            </Text>
+          </Pressable>
+
+          {hasManufacturerHardening() && (
+            <Pressable
+              onPress={async () => {
+                const opened = await openAutostartSettings();
+                await markHardeningPrompted();
+                if (!opened) {
+                  Alert.alert(
+                    'No s\'ha pogut obrir',
+                    `No hem trobat la pantalla d\'Autostart al teu ${getManufacturer()}. Busca-la manualment a Ajustos.`,
+                  );
+                }
+              }}
+              className="border border-blue-300 rounded-lg py-2 items-center active:bg-blue-50 mb-2"
+            >
+              <Text className="text-xs text-blue-700 font-medium">
+                Permetre Autostart ({getManufacturer()})
+              </Text>
+            </Pressable>
+          )}
+        </View>
       )}
 
       <Pressable
