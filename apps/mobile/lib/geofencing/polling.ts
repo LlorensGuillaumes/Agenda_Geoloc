@@ -543,16 +543,6 @@ TaskManager.defineTask<LocationTaskData>(POLLING_TASK, async ({ data, error }) =
         const proactiveStreakRaw = await AsyncStorage.getItem(proactiveStreakKey);
         let proactiveStreak = proactiveStreakRaw ? Number(proactiveStreakRaw) : 0;
 
-        // Reset del streak si estem clarament dins (50% del trigger). Així una
-        // sortida incompleta d'una sessió prèvia (l'usuari va a passeig curt i
-        // torna abans que streak arribi a 2) no deixa residu al storage que
-        // anul·li la defensa anti-oscil·lació al següent cross-in.
-        const clearlyInsideProactive = dist <= triggerDist * 0.5;
-        if (clearlyInsideProactive && proactiveStreak > 0) {
-          await AsyncStorage.removeItem(proactiveStreakKey);
-          proactiveStreak = 0;
-        }
-
         const clearlyOutsideProactive = dist > triggerDist + PROACTIVE_EXIT_MARGIN_M;
         const traceBase: TraceItemInput = {
           ts: tsISO,
