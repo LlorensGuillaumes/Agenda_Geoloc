@@ -193,6 +193,37 @@ export async function setKeepaliveAlarms(alarmIds: string[]): Promise<void> {
 }
 
 /**
+ * Rescat idempotent: si hi ha alarmes a vigilar però el location task no està
+ * arrencat (típic després d'un kill agressiu de MIUI), l'arrenca. Si ja està
+ * corrent, no fa res. Pensat per cridar-se des de:
+ *   - El handler del GEOFENCE_TASK (despertat per GMS quan creua una zona)
+ *   - L'app focus a (tabs)/_layout
+ *
+ * Retorna `true` si ha rescatat el task, `false` si no calia.
+ */
+export async function ensureLocationTaskRunning(): Promise<boolean> {
+  if (Platform.OS !== 'android') return false;
+  const keepaliveIds = await readKeepaliveIds();
+  const pollingEntries = await readPollingEntries();
+  const shouldRun = keepaliveIds.length > 0 || pollingEntries.length > 0;
+  if (!shouldRun) return false;
+  let running = false;
+  try {
+    running = await Location.hasStartedLocationUpdatesAsync(POLLING_TASK);
+  } catch {
+    running = false;
+  }
+  if (running) return false;
+  const placesCount = keepaliveIds.length;
+  const body =
+    placesCount > 0
+      ? `Vigilando ${placesCount} ${placesCount === 1 ? 'lugar' : 'lugares'} para alarmas`
+      : 'Confirmando ubicación cercana a un lugar guardado';
+  await startLocationTask(body);
+  return true;
+}
+
+/**
  * Añade un polling de confirmación para una alarma. Idempotente: si ya hay
  * uno activo para la misma alarma, lo sobreescribe.
  */

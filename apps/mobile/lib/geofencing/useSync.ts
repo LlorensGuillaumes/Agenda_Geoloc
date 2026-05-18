@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { AppState } from 'react-native';
 import { useAlarms } from '../alarms/hooks';
 import { usePlaces } from '../places/hooks';
 import { useAuthStore } from '../auth/store';
@@ -7,6 +8,7 @@ import {
   unregisterAllGeofences,
   type SyncResult,
 } from './index';
+import { ensureLocationTaskRunning } from './polling';
 
 export type GeofenceSyncState = {
   lastResult: SyncResult | null;
@@ -80,6 +82,22 @@ export function useGeofenceSync(): GeofenceSyncState {
         }),
       );
   }, [alarms, places, status, ownAlarms]);
+
+  // Rescat: si l'usuari obre l'app després que MIUI hagi matat el procés,
+  // el location task hauria de tornar a arrencar. Sense això quedaria mort
+  // i no captaríem mai els "Sortir" o els polling de confirmació.
+  useEffect(() => {
+    if (status !== 'authenticated') return;
+    const sub = AppState.addEventListener('change', (next) => {
+      if (next === 'active') {
+        ensureLocationTaskRunning().catch(() => {});
+      }
+    });
+    // També en mount: l'usuari pot obrir l'app sense passar per un canvi
+    // d'AppState (cold start).
+    ensureLocationTaskRunning().catch(() => {});
+    return () => sub.remove();
+  }, [status]);
 
   return state;
 }

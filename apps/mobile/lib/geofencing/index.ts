@@ -7,6 +7,7 @@ import type { Alarm, NotifyConfig, Place } from '../api/client';
 import {
   cancelConfirmation,
   clearAllPolling,
+  ensureLocationTaskRunning,
   setKeepaliveAlarms,
   startConfirmation,
 } from './polling';
@@ -101,6 +102,12 @@ TaskManager.defineTask<GeofenceTaskData>(GEOFENCE_TASK, async ({ data, error }) 
   if (!data) return;
   const { eventType, region } = data;
   if (!region?.identifier) return;
+
+  // Rescat: si el procés s'havia mort i ara GMS l'ha despertat, és la
+  // millor oportunitat per ressuscitar el location task. Fer-ho aquí garanteix
+  // que la primera transició natiu després d'un kill reactiva el polling sense
+  // necessitat que l'usuari obri l'app. Idempotent si ja està arrencat.
+  ensureLocationTaskRunning().catch(() => {});
 
   const isEnter = eventType === Location.GeofencingEventType.Enter;
 
