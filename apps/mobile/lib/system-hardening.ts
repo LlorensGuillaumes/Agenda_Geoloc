@@ -126,6 +126,77 @@ export function hasManufacturerHardening(): boolean {
 }
 
 /**
+ * Obre la pantalla de detalls de l'app (Settings → Apps → Agenda) on l'usuari
+ * pot revisar permisos, notificacions, bateria, etc.
+ */
+export async function openAppDetailSettings(): Promise<void> {
+  if (Platform.OS !== 'android') return;
+  const appId = Constants.expoConfig?.android?.package ?? 'dev.llorensguillaumes.agenda';
+  await IntentLauncher.startActivityAsync(
+    IntentLauncher.ActivityAction.APPLICATION_DETAILS_SETTINGS,
+    { data: `package:${appId}` },
+  );
+}
+
+/**
+ * MIUI/Xiaomi: obre la pàgina "Altres permisos" de la nostra app, on hi ha
+ * "Iniciar en segon pla", "Mostrar finestres emergents", etc.
+ * Fallback a APPLICATION_DETAILS_SETTINGS si el target específic no existeix.
+ */
+export async function openMiuiOtherPermissions(): Promise<boolean> {
+  if (Platform.OS !== 'android') return false;
+  if (getManufacturer() !== 'xiaomi') return false;
+  const appId = Constants.expoConfig?.android?.package ?? 'dev.llorensguillaumes.agenda';
+  const targets: { packageName: string; className: string; extra?: Record<string, unknown> }[] = [
+    {
+      packageName: 'com.miui.securitycenter',
+      className: 'com.miui.permcenter.permissions.PermissionsEditorActivity',
+      extra: { extra_pkgname: appId },
+    },
+    {
+      packageName: 'com.miui.securitycenter',
+      className: 'com.miui.permcenter.permissions.AppPermissionsEditorActivity',
+      extra: { extra_pkgname: appId },
+    },
+  ];
+  for (const t of targets) {
+    try {
+      await IntentLauncher.startActivityAsync(
+        'miui.intent.action.APP_PERM_EDITOR',
+        { packageName: t.packageName, className: t.className, extra: t.extra },
+      );
+      return true;
+    } catch {
+      // try next
+    }
+  }
+  return false;
+}
+
+/**
+ * MIUI: obre la configuració d'estalvi de bateria de l'app específic (on
+ * hi ha "Sense restriccions" / "Battery saver" / "Restricted").
+ */
+export async function openMiuiBatterySaver(): Promise<boolean> {
+  if (Platform.OS !== 'android') return false;
+  if (getManufacturer() !== 'xiaomi') return false;
+  const appId = Constants.expoConfig?.android?.package ?? 'dev.llorensguillaumes.agenda';
+  try {
+    await IntentLauncher.startActivityAsync(
+      'miui.intent.action.HIDDEN_APPS_CONFIG_ACTIVITY',
+      {
+        packageName: 'com.miui.powerkeeper',
+        className: 'com.miui.powerkeeper.ui.HiddenAppsConfigActivity',
+        extra: { package_name: appId },
+      },
+    );
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Marca que ja hem ofert el bundle de hardening a l'usuari un cop, perquè
  * no l'empipem cada vegada que crea una alarma de geofencing.
  */
